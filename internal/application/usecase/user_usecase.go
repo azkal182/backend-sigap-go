@@ -52,7 +52,7 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest
 		return nil, domainErrors.ErrInternalServer
 	}
 
-	// Assign roles if provided
+	// Assign roles if provided, otherwise assign default role
 	if len(req.RoleIDs) > 0 {
 		roles := make([]entity.Role, 0)
 		for _, roleIDStr := range req.RoleIDs {
@@ -67,6 +67,12 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest
 			roles = append(roles, *role)
 		}
 		user.Roles = roles
+	} else {
+		// Assign default role (user role)
+		defaultRole, err := uc.roleRepo.GetBySlug(ctx, "user")
+		if err == nil && defaultRole != nil {
+			user.Roles = []entity.Role{*defaultRole}
+		}
 	}
 
 	// Save user
@@ -199,6 +205,42 @@ func (uc *UserUseCase) ListUsers(ctx context.Context, page, pageSize int) (*dto.
 		PageSize:   pageSize,
 		TotalPages: totalPages,
 	}, nil
+}
+
+// AssignRoleToUser assigns a role to a user
+func (uc *UserUseCase) AssignRoleToUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	// Check if user exists
+	_, err := uc.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return domainErrors.ErrUserNotFound
+	}
+
+	// Check if role exists
+	_, err = uc.roleRepo.GetByID(ctx, roleID)
+	if err != nil {
+		return domainErrors.ErrRoleNotFound
+	}
+
+	// Assign role
+	return uc.userRepo.AssignRole(ctx, userID, roleID)
+}
+
+// RemoveRoleFromUser removes a role from a user
+func (uc *UserUseCase) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	// Check if user exists
+	_, err := uc.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return domainErrors.ErrUserNotFound
+	}
+
+	// Check if role exists
+	_, err = uc.roleRepo.GetByID(ctx, roleID)
+	if err != nil {
+		return domainErrors.ErrRoleNotFound
+	}
+
+	// Remove role
+	return uc.userRepo.RemoveRole(ctx, userID, roleID)
 }
 
 // toUserResponse converts entity.User to dto.UserResponse

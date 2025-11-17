@@ -192,3 +192,72 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	response.SuccessOK(c, resp, "Users retrieved successfully")
 }
+
+// AssignRoleToUser handles assigning a role to a user
+func (h *UserHandler) AssignRoleToUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
+		return
+	}
+
+	var req dto.AssignRoleToUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
+		return
+	}
+
+	roleID, err := uuid.Parse(req.RoleID)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid role ID", err.Error())
+		return
+	}
+
+	err = h.userUseCase.AssignRoleToUser(c.Request.Context(), userID, roleID)
+	if err != nil {
+		switch err {
+		case domainErrors.ErrUserNotFound:
+			response.ErrorNotFound(c, "User not found")
+		case domainErrors.ErrRoleNotFound:
+			response.ErrorNotFound(c, "Role not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to assign role", err.Error())
+		}
+		return
+	}
+
+	response.SuccessOK(c, nil, "Role assigned successfully")
+}
+
+// RemoveRoleFromUser handles removing a role from a user
+func (h *UserHandler) RemoveRoleFromUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
+		return
+	}
+
+	roleIDStr := c.Param("role_id")
+	roleID, err := uuid.Parse(roleIDStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid role ID", err.Error())
+		return
+	}
+
+	err = h.userUseCase.RemoveRoleFromUser(c.Request.Context(), userID, roleID)
+	if err != nil {
+		switch err {
+		case domainErrors.ErrUserNotFound:
+			response.ErrorNotFound(c, "User not found")
+		case domainErrors.ErrRoleNotFound:
+			response.ErrorNotFound(c, "Role not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to remove role", err.Error())
+		}
+		return
+	}
+
+	response.SuccessOK(c, nil, "Role removed successfully")
+}

@@ -17,4 +17,6 @@ type UserRepository interface {
 	List(ctx context.Context, limit, offset int) ([]*entity.User, int64, error)
 	GetWithRoles(ctx context.Context, id uuid.UUID) (*entity.User, error)
 	GetWithRolesAndDormitories(ctx context.Context, id uuid.UUID) (*entity.User, error)
+	AssignRole(ctx context.Context, userID, roleID uuid.UUID) error
+	RemoveRole(ctx context.Context, userID, roleID uuid.UUID) error
 }

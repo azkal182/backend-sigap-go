@@ -17,6 +17,7 @@ var (
 	// Role errors
 	ErrRoleNotFound      = errors.New("role not found")
 	ErrRoleAlreadyExists = errors.New("role already exists")
+	ErrProtectedRole     = errors.New("cannot modify protected role")
 
 	// Permission errors
 	ErrPermissionNotFound      = errors.New("permission not found")

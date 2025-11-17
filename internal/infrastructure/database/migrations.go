@@ -1,6 +1,9 @@
 package database
 
 import (
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
 	"gorm.io/gorm"
 )
@@ -49,16 +52,72 @@ func init() {
 		},
 	)
 
-	// Add more migrations here as needed
-	// Example:
-	// RegisterMigration(
-	// 	"002_add_user_phone",
-	// 	"Add phone field to users table",
-	// 	func(db *gorm.DB) error {
-	// 		return db.Migrator().AddColumn(&entity.User{}, "phone")
-	// 	},
-	// 	func(db *gorm.DB) error {
-	// 		return db.Migrator().DropColumn(&entity.User{}, "phone")
-	// 	},
-	// )
+	// Migration 002: Add IsProtected field to roles and seed default roles
+	RegisterMigration(
+		"002_add_role_protection_and_seed",
+		"Add IsProtected field to roles table and seed default roles",
+		func(db *gorm.DB) error {
+			// Add IsProtected column if it doesn't exist
+			if !db.Migrator().HasColumn(&entity.Role{}, "is_protected") {
+				if err := db.Migrator().AddColumn(&entity.Role{}, "is_protected"); err != nil {
+					return err
+				}
+			}
+
+			// Seed default roles if they don't exist
+			now := time.Now()
+			defaultRoles := []entity.Role{
+				{
+					ID:          uuid.New(),
+					Name:        "User",
+					Slug:        "user",
+					IsActive:    true,
+					IsProtected: false,
+					CreatedAt:   now,
+					UpdatedAt:   now,
+				},
+				{
+					ID:          uuid.New(),
+					Name:        "Admin",
+					Slug:        "admin",
+					IsActive:    true,
+					IsProtected: true, // Protected role
+					CreatedAt:   now,
+					UpdatedAt:   now,
+				},
+				{
+					ID:          uuid.New(),
+					Name:        "Super Admin",
+					Slug:        "super_admin",
+					IsActive:    true,
+					IsProtected: true, // Protected role
+					CreatedAt:   now,
+					UpdatedAt:   now,
+				},
+			}
+
+			for _, role := range defaultRoles {
+				var existingRole entity.Role
+				result := db.Where("slug = ?", role.Slug).First(&existingRole)
+				if result.Error == gorm.ErrRecordNotFound {
+					// Role doesn't exist, create it
+					if err := db.Create(&role).Error; err != nil {
+						return err
+					}
+				} else if result.Error != nil {
+					return result.Error
+				}
+				// If role exists, skip it
+			}
+
+			return nil
+		},
+		func(db *gorm.DB) error {
+			// Rollback: Remove IsProtected column
+			if db.Migrator().HasColumn(&entity.Role{}, "is_protected") {
+				return db.Migrator().DropColumn(&entity.Role{}, "is_protected")
+			}
+			return nil
+		},
+	)
 }

@@ -25,15 +25,16 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run migrations (using AutoMigrate for backward compatibility)
+	// Run migrations (using versioned migrations)
 	// For production, use: go run cmd/migrate/main.go -command up
-	if err := database.Migrate(); err != nil {
+	if err := database.MigrateUpVersioned(); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	// Initialize repositories
 	userRepo := infraRepo.NewUserRepository()
 	roleRepo := infraRepo.NewRoleRepository()
+	permissionRepo := infraRepo.NewPermissionRepository()
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
 
 	// Initialize services
@@ -42,18 +43,20 @@ func main() {
 	// Initialize use cases
 	authUseCase := usecase.NewAuthUseCase(userRepo, tokenService)
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo)
+	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
 	userHandler := handler.NewUserHandler(userUseCase)
+	roleHandler := handler.NewRoleHandler(roleUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, authMiddleware)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

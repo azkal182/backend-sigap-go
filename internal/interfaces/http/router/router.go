@@ -12,6 +12,7 @@ func SetupRouter(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
 	dormitoryHandler *handler.DormitoryHandler,
+	roleHandler *handler.RoleHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -44,6 +45,8 @@ func SetupRouter(
 				users.POST("", authMiddleware.RequirePermission("user:create"), userHandler.CreateUser)
 				users.PUT("/:id", authMiddleware.RequirePermission("user:update"), userHandler.UpdateUser)
 				users.DELETE("/:id", authMiddleware.RequirePermission("user:delete"), userHandler.DeleteUser)
+				users.POST("/:id/roles", authMiddleware.RequirePermission("user:update"), userHandler.AssignRoleToUser)
+				users.DELETE("/:id/roles/:role_id", authMiddleware.RequirePermission("user:update"), userHandler.RemoveRoleFromUser)
 			}
 
 			// Dormitory routes
@@ -54,6 +57,18 @@ func SetupRouter(
 				dormitories.POST("", authMiddleware.RequirePermission("dorm:create"), dormitoryHandler.CreateDormitory)
 				dormitories.PUT("/:id", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:update"), dormitoryHandler.UpdateDormitory)
 				dormitories.DELETE("/:id", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:delete"), dormitoryHandler.DeleteDormitory)
+			}
+
+			// Role routes
+			roles := protected.Group("/roles")
+			{
+				roles.GET("", authMiddleware.RequirePermission("role:read"), roleHandler.ListRoles)
+				roles.GET("/:id", authMiddleware.RequirePermission("role:read"), roleHandler.GetRole)
+				roles.POST("", authMiddleware.RequirePermission("role:create"), roleHandler.CreateRole)
+				roles.PUT("/:id", authMiddleware.RequirePermission("role:update"), roleHandler.UpdateRole)
+				roles.DELETE("/:id", authMiddleware.RequirePermission("role:delete"), roleHandler.DeleteRole)
+				roles.POST("/:id/permissions", authMiddleware.RequirePermission("role:update"), roleHandler.AssignPermission)
+				roles.DELETE("/:id/permissions", authMiddleware.RequirePermission("role:update"), roleHandler.RemovePermission)
 			}
 		}
 	}

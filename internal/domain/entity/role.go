@@ -8,12 +8,13 @@ import (
 
 // Role represents a role entity in the domain
 type Role struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	IsActive    bool      `json:"is_active"`
+	IsProtected bool      `json:"is_protected"` // Roles that cannot have permissions edited
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Relations
 	Permissions []Permission `gorm:"many2many:role_permissions;" json:"permissions,omitempty"`

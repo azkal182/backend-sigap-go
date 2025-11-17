@@ -94,3 +94,17 @@ func (r *userRepository) GetWithRolesAndDormitories(ctx context.Context, id uuid
 	}
 	return &user, nil
 }
+
+func (r *userRepository) AssignRole(ctx context.Context, userID, roleID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Create(&entity.UserRole{
+			UserID: userID,
+			RoleID: roleID,
+		}).Error
+}
+
+func (r *userRepository) RemoveRole(ctx context.Context, userID, roleID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND role_id = ?", userID, roleID).
+		Delete(&entity.UserRole{}).Error
+}
