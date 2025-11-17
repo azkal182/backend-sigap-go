@@ -39,7 +39,8 @@ func Connect() error {
 	return nil
 }
 
-// Migrate runs database migrations
+// Migrate runs database migrations (legacy - uses AutoMigrate)
+// For versioned migrations, use MigrateUp() instead
 func Migrate() error {
 	if DB == nil {
 		return fmt.Errorf("database connection not initialized")
@@ -61,6 +62,16 @@ func Migrate() error {
 
 	log.Println("Database migrations completed successfully")
 	return nil
+}
+
+// MigrateUpVersioned runs versioned migrations
+// This is a wrapper that ensures migrations are registered
+func MigrateUpVersioned() error {
+	if DB == nil {
+		return fmt.Errorf("database connection not initialized")
+	}
+
+	return MigrateUp(DB)
 }
 
 // Close closes the database connection

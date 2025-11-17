@@ -25,7 +25,8 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run migrations
+	// Run migrations (using AutoMigrate for backward compatibility)
+	// For production, use: go run cmd/migrate/main.go -command up
 	if err := database.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

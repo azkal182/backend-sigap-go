@@ -10,10 +10,16 @@ test:
 	go test -v ./...
 
 migrate-up:
-	go run cmd/migrate/main.go up
+	go run cmd/migrate/main.go -command up
 
 migrate-down:
-	go run cmd/migrate/main.go down
+	go run cmd/migrate/main.go -command down
+
+migrate-status:
+	go run cmd/migrate/main.go -command status
+
+migrate-to:
+	go run cmd/migrate/main.go -command to -version $(VERSION)
 
 clean:
 	rm -rf bin/
