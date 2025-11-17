@@ -12,14 +12,21 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 
 ### 2. Role & Permission System
 - ✅ Role-based dan Permission-based authorization
-- ✅ Contoh permission: `user:read`, `user:update`, `dorm:read`, `dorm:update`
+- ✅ **Role Management** - CRUD operations untuk roles
+- ✅ **Protected Roles** - Role tertentu (admin, super_admin) tidak bisa diubah permission-nya
+- ✅ **Assign/Remove Permissions** - Kelola permission pada role
+- ✅ **Assign/Remove Roles to Users** - Kelola role assignment pada user
+- ✅ **Default Role Assignment** - User baru otomatis mendapat role "user" jika tidak ditentukan
+- ✅ Contoh permission: `user:read`, `user:update`, `dorm:read`, `dorm:update`, `role:read`, `role:create`, dll
 - ✅ Role dapat memiliki banyak permission
 - ✅ User dapat memiliki satu atau lebih role
 
 ### 3. User Management (CRUD Users)
 - ✅ Create, Read, Update, Delete user
 - ✅ Pagination support
-- ✅ Role assignment
+- ✅ Role assignment saat create user
+- ✅ Assign/Remove role ke user yang sudah ada
+- ✅ Default role "user" untuk user baru
 
 ### 4. Dormitory Management (CRUD Dormitory)
 - ✅ CRUD untuk data dormitory
@@ -161,10 +168,28 @@ createdb go_backend_db
 ```
 
 ### 5. Run Migrations
-Migrations akan berjalan otomatis saat aplikasi start, atau bisa dijalankan manual:
+Migrations menggunakan versioned migration system yang lebih aman dan dapat diulang:
+
 ```bash
-go run cmd/main.go
+# Run migrations (akan berjalan otomatis saat aplikasi start)
+make run
+
+# Atau jalankan migration manual
+make migrate-up
+
+# Check migration status
+make migrate-status
+
+# Rollback last migration
+make migrate-down
 ```
+
+**Catatan:** 
+- Migrations akan otomatis berjalan saat aplikasi start
+- Migration 001: Membuat schema database awal
+- Migration 002: Menambahkan field `is_protected` pada roles table dan seed default roles
+- Default roles yang dibuat: `user`, `admin`, `super_admin`
+- Role `admin` dan `super_admin` adalah protected roles
 
 ### 6. Seed Data (Optional)
 ```bash
@@ -172,10 +197,18 @@ go run cmd/seed/main.go
 ```
 
 Ini akan membuat:
-- Permissions: `user:read`, `user:create`, `user:update`, `user:delete`, `dorm:read`, `dorm:create`, `dorm:update`, `dorm:delete`
-- Roles: `admin`, `staff`, `user`
-- Admin user: `admin@example.com` / `admin123`
-- Sample dormitories
+- **Permissions**: 
+  - User: `user:read`, `user:create`, `user:update`, `user:delete`
+  - Dormitory: `dorm:read`, `dorm:create`, `dorm:update`, `dorm:delete`
+  - Role: `role:read`, `role:create`, `role:update`, `role:delete`
+- **Roles**: 
+  - `user` (default role, not protected) - memiliki `dorm:read`
+  - `admin` (protected) - memiliki semua permissions
+  - `super_admin` (protected) - memiliki semua permissions
+- **Users**:
+  - Admin: `admin@example.com` / `admin123`
+  - Super Admin: `superadmin@example.com` / `superadmin123`
+- **Sample dormitories**
 
 ### 7. Run Application
 ```bash
@@ -201,6 +234,17 @@ Server akan berjalan di `http://localhost:8080`
 - `POST /api/users` - Create user (requires `user:create` permission)
 - `PUT /api/users/:id` - Update user (requires `user:update` permission)
 - `DELETE /api/users/:id` - Delete user (requires `user:delete` permission)
+- `POST /api/users/:id/roles` - Assign role to user (requires `user:update` permission)
+- `DELETE /api/users/:id/roles/:role_id` - Remove role from user (requires `user:update` permission)
+
+### Roles (Protected)
+- `GET /api/roles` - List roles (with pagination, requires `role:read` permission)
+- `GET /api/roles/:id` - Get role by ID (requires `role:read` permission)
+- `POST /api/roles` - Create role (requires `role:create` permission)
+- `PUT /api/roles/:id` - Update role (requires `role:update` permission)
+- `DELETE /api/roles/:id` - Delete role (requires `role:delete` permission, protected roles cannot be deleted)
+- `POST /api/roles/:id/permissions` - Assign permission to role (requires `role:update` permission, protected roles cannot be modified)
+- `DELETE /api/roles/:id/permissions` - Remove permission from role (requires `role:update` permission, protected roles cannot be modified)
 
 ### Dormitories (Protected)
 - `GET /api/dormitories` - List dormitories (with pagination)
@@ -334,19 +378,65 @@ curl -X GET http://localhost:8080/api/users \
 ## 🎯 Permission System
 
 ### Default Permissions
+
+**User Permissions:**
 - `user:read` - Read users
 - `user:create` - Create users
 - `user:update` - Update users
 - `user:delete` - Delete users
+
+**Dormitory Permissions:**
 - `dorm:read` - Read dormitories
 - `dorm:create` - Create dormitories
 - `dorm:update` - Update dormitories
 - `dorm:delete` - Delete dormitories
 
+**Role Permissions:**
+- `role:read` - Read roles
+- `role:create` - Create roles
+- `role:update` - Update roles
+- `role:delete` - Delete roles
+
 ### Default Roles
-- **admin** - Has all permissions
-- **staff** - Has `user:read`, `dorm:read`, `dorm:update`
-- **user** - Has `dorm:read` only
+
+- **user** (default role, not protected)
+  - Has `dorm:read` only
+  - Automatically assigned to new users if no role specified
+  - Can be modified (permissions can be changed)
+
+- **admin** (protected role)
+  - Has all permissions (user:*, dorm:*, role:*)
+  - Protected: Cannot modify permissions or delete
+  - Use for administrative access
+
+- **super_admin** (protected role)
+  - Has all permissions (user:*, dorm:*, role:*)
+  - Protected: Cannot modify permissions or delete
+  - Use for super administrative access
+
+### Protected Roles
+
+Protected roles (`admin` dan `super_admin`) memiliki batasan:
+- ❌ Tidak bisa diubah permission-nya (assign/remove permission)
+- ❌ Tidak bisa dihapus
+- ✅ Bisa diubah nama, slug, dan status aktif
+- ✅ Bisa di-assign ke user
+
+### Role Management Features
+
+1. **Create Role**: Buat role baru dengan permission tertentu
+2. **Update Role**: Ubah nama, slug, atau status role
+3. **Delete Role**: Hapus role (kecuali protected roles)
+4. **Assign Permission**: Tambahkan permission ke role
+5. **Remove Permission**: Hapus permission dari role
+6. **Assign Role to User**: Berikan role ke user
+7. **Remove Role from User**: Hapus role dari user
+
+### Default Role Assignment
+
+Saat membuat user baru:
+- Jika `role_ids` tidak diberikan → otomatis mendapat role "user"
+- Jika `role_ids` diberikan → mendapat role sesuai yang ditentukan
 
 ## 🛡️ Guard System
 
@@ -355,9 +445,46 @@ Guard system mengontrol akses user ke dormitory tertentu:
 1. **Admin/Super Admin** - Dapat mengakses semua dormitory
 2. **Staff/User dengan assignment** - Hanya dapat mengakses dormitory yang di-assign ke mereka
 
-Untuk assign dormitory ke user, gunakan endpoint:
+## 📝 Role Management Examples
+
+### Create Role
 ```bash
-# Assign dormitory to user (via database atau buat endpoint khusus)
+curl -X POST http://localhost:8080/api/roles \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Manager",
+    "slug": "manager",
+    "is_active": true,
+    "is_protected": false,
+    "permission_ids": ["permission-uuid-1", "permission-uuid-2"]
+  }'
+```
+
+### Assign Permission to Role
+```bash
+curl -X POST http://localhost:8080/api/roles/{role_id}/permissions \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "permission_id": "permission-uuid"
+  }'
+```
+
+### Assign Role to User
+```bash
+curl -X POST http://localhost:8080/api/users/{user_id}/roles \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role_id": "role-uuid"
+  }'
+```
+
+### Remove Role from User
+```bash
+curl -X DELETE http://localhost:8080/api/users/{user_id}/roles/{role_id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ## 🧪 Testing

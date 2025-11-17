@@ -71,3 +71,13 @@ func (m *MockUserRepository) GetWithRolesAndDormitories(ctx context.Context, id 
 	}
 	return args.Get(0).(*entity.User), args.Error(1)
 }
+
+func (m *MockUserRepository) AssignRole(ctx context.Context, userID, roleID uuid.UUID) error {
+	args := m.Called(ctx, userID, roleID)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) RemoveRole(ctx context.Context, userID, roleID uuid.UUID) error {
+	args := m.Called(ctx, userID, roleID)
+	return args.Error(0)
+}
