@@ -514,14 +514,770 @@ make build
 - **Infrastructure Layer**: External concerns (DB, HTTP, etc.)
 - **Interface Layer**: HTTP handlers, depends on application layer
 
-### Adding New Features
-1. Define entity in `internal/domain/entity/`
-2. Create repository interface in `internal/domain/repository/`
-3. Implement repository in `internal/infrastructure/repository/`
-4. Create use case in `internal/application/usecase/`
-5. Create handler in `internal/interfaces/http/handler/`
-6. Add routes in `internal/interfaces/http/router/router.go`
-7. **Gunakan standardized response helpers** dari `internal/interfaces/http/response` untuk semua response
+## 🚀 Panduan Menambahkan Fitur Baru
+
+Panduan lengkap untuk menambahkan fitur baru mengikuti Clean Architecture / Hexagonal Architecture pattern.
+
+### 📋 Overview
+
+Struktur Clean Architecture terdiri dari 4 layer:
+1. **Domain Layer** - Business logic murni, tidak bergantung pada framework
+2. **Application Layer** - Use cases dan business rules
+3. **Infrastructure Layer** - Implementasi konkret (database, external services)
+4. **Interface Layer** - HTTP handlers, API endpoints
+
+### 🎯 Contoh: Menambahkan Fitur "Product Management"
+
+Kita akan membuat CRUD untuk Product sebagai contoh lengkap.
+
+---
+
+### **Step 1: Define Domain Entity**
+
+Buat entity di `internal/domain/entity/product.go`:
+
+```go
+package entity
+
+import (
+	"time"
+	"github.com/google/uuid"
+)
+
+// Product represents a product entity in the domain
+type Product struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Price       float64   `json:"price"`
+	Stock       int       `json:"stock"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
+}
+
+// TableName specifies the table name for GORM
+func (Product) TableName() string {
+	return "products"
+}
+```
+
+**Best Practices:**
+- Entity harus pure Go struct, tidak ada dependency pada framework
+- Gunakan UUID untuk ID
+- Tambahkan timestamps (CreatedAt, UpdatedAt)
+- Untuk soft delete, gunakan DeletedAt (pointer)
+
+---
+
+### **Step 2: Create Repository Interface (Port)**
+
+Buat interface di `internal/domain/repository/product_repository.go`:
+
+```go
+package repository
+
+import (
+	"context"
+	"github.com/google/uuid"
+	"github.com/your-org/go-backend-starter/internal/domain/entity"
+)
+
+// ProductRepository defines the interface for product data operations
+type ProductRepository interface {
+	Create(ctx context.Context, product *entity.Product) error
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.Product, error)
+	Update(ctx context.Context, product *entity.Product) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	List(ctx context.Context, limit, offset int) ([]*entity.Product, int64, error)
+}
+```
+
+**Best Practices:**
+- Interface didefinisikan di domain layer (port)
+- Gunakan context untuk cancellation dan timeout
+- Return error untuk error handling yang konsisten
+
+---
+
+### **Step 3: Implement Repository (Adapter)**
+
+Buat implementasi di `internal/infrastructure/repository/product_repository.go`:
+
+```go
+package repository
+
+import (
+	"context"
+	"github.com/google/uuid"
+	"github.com/your-org/go-backend-starter/internal/domain/entity"
+	"github.com/your-org/go-backend-starter/internal/domain/repository"
+	"github.com/your-org/go-backend-starter/internal/infrastructure/database"
+	"gorm.io/gorm"
+)
+
+type productRepository struct {
+	db *gorm.DB
+}
+
+// NewProductRepository creates a new product repository
+func NewProductRepository() repository.ProductRepository {
+	return &productRepository{
+		db: database.DB,
+	}
+}
+
+func (r *productRepository) Create(ctx context.Context, product *entity.Product) error {
+	return r.db.WithContext(ctx).Create(product).Error
+}
+
+func (r *productRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Product, error) {
+	var product entity.Product
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&product).Error
+	if err != nil {
+		return nil, err
+	}
+	return &product, nil
+}
+
+func (r *productRepository) Update(ctx context.Context, product *entity.Product) error {
+	return r.db.WithContext(ctx).Save(product).Error
+}
+
+func (r *productRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Delete(&entity.Product{}, id).Error
+}
+
+func (r *productRepository) List(ctx context.Context, limit, offset int) ([]*entity.Product, int64, error) {
+	var products []*entity.Product
+	var total int64
+
+	err := r.db.WithContext(ctx).Model(&entity.Product{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = r.db.WithContext(ctx).
+		Limit(limit).
+		Offset(offset).
+		Find(&products).Error
+
+	return products, total, err
+}
+```
+
+**Best Practices:**
+- Implementasi repository menggunakan GORM
+- Selalu gunakan `WithContext(ctx)` untuk context propagation
+- Handle error dengan baik
+
+---
+
+### **Step 4: Create DTOs**
+
+Buat DTOs di `internal/application/dto/product_dto.go`:
+
+```go
+package dto
+
+// CreateProductRequest represents the request to create a product
+type CreateProductRequest struct {
+	Name        string  `json:"name" binding:"required"`
+	Description string  `json:"description" binding:"required"`
+	Price       float64 `json:"price" binding:"required,min=0"`
+	Stock       int     `json:"stock" binding:"required,min=0"`
+}
+
+// UpdateProductRequest represents the request to update a product
+type UpdateProductRequest struct {
+	Name        string  `json:"name,omitempty"`
+	Description string  `json:"description,omitempty"`
+	Price       *float64 `json:"price,omitempty"`
+	Stock       *int     `json:"stock,omitempty"`
+	IsActive    *bool    `json:"is_active,omitempty"`
+}
+
+// ProductResponse represents product data in responses
+type ProductResponse struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price"`
+	Stock       int     `json:"stock"`
+	IsActive    bool    `json:"is_active"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+}
+
+// ListProductsResponse represents paginated product list response
+type ListProductsResponse struct {
+	Products   []ProductResponse `json:"products"`
+	Total      int64             `json:"total"`
+	Page       int               `json:"page"`
+	PageSize   int               `json:"page_size"`
+	TotalPages int               `json:"total_pages"`
+}
+```
+
+**Best Practices:**
+- DTOs untuk request/response terpisah dari entity
+- Gunakan validation tags (binding:"required", dll)
+- Untuk optional fields, gunakan pointer atau omitempty
+
+---
+
+### **Step 5: Create Use Case**
+
+Buat use case di `internal/application/usecase/product_usecase.go`:
+
+```go
+package usecase
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/your-org/go-backend-starter/internal/application/dto"
+	"github.com/your-org/go-backend-starter/internal/domain/entity"
+	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/domain/repository"
+)
+
+// ProductUseCase handles product management use cases
+type ProductUseCase struct {
+	productRepo repository.ProductRepository
+}
+
+// NewProductUseCase creates a new product use case
+func NewProductUseCase(productRepo repository.ProductRepository) *ProductUseCase {
+	return &ProductUseCase{
+		productRepo: productRepo,
+	}
+}
+
+// CreateProduct creates a new product
+func (uc *ProductUseCase) CreateProduct(ctx context.Context, req dto.CreateProductRequest) (*dto.ProductResponse, error) {
+	product := &entity.Product{
+		ID:          uuid.New(),
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       req.Price,
+		Stock:       req.Stock,
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := uc.productRepo.Create(ctx, product); err != nil {
+		return nil, domainErrors.ErrInternalServer
+	}
+
+	return uc.toProductResponse(product), nil
+}
+
+// GetProductByID retrieves a product by ID
+func (uc *ProductUseCase) GetProductByID(ctx context.Context, id uuid.UUID) (*dto.ProductResponse, error) {
+	product, err := uc.productRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, domainErrors.ErrProductNotFound
+	}
+
+	return uc.toProductResponse(product), nil
+}
+
+// UpdateProduct updates a product
+func (uc *ProductUseCase) UpdateProduct(ctx context.Context, id uuid.UUID, req dto.UpdateProductRequest) (*dto.ProductResponse, error) {
+	product, err := uc.productRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, domainErrors.ErrProductNotFound
+	}
+
+	// Update fields
+	if req.Name != "" {
+		product.Name = req.Name
+	}
+	if req.Description != "" {
+		product.Description = req.Description
+	}
+	if req.Price != nil {
+		product.Price = *req.Price
+	}
+	if req.Stock != nil {
+		product.Stock = *req.Stock
+	}
+	if req.IsActive != nil {
+		product.IsActive = *req.IsActive
+	}
+
+	product.UpdatedAt = time.Now()
+
+	if err := uc.productRepo.Update(ctx, product); err != nil {
+		return nil, domainErrors.ErrInternalServer
+	}
+
+	return uc.toProductResponse(product), nil
+}
+
+// DeleteProduct deletes a product
+func (uc *ProductUseCase) DeleteProduct(ctx context.Context, id uuid.UUID) error {
+	_, err := uc.productRepo.GetByID(ctx, id)
+	if err != nil {
+		return domainErrors.ErrProductNotFound
+	}
+
+	return uc.productRepo.Delete(ctx, id)
+}
+
+// ListProducts retrieves a paginated list of products
+func (uc *ProductUseCase) ListProducts(ctx context.Context, page, pageSize int) (*dto.ListProductsResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	offset := (page - 1) * pageSize
+
+	products, total, err := uc.productRepo.List(ctx, pageSize, offset)
+	if err != nil {
+		return nil, domainErrors.ErrInternalServer
+	}
+
+	productResponses := make([]dto.ProductResponse, 0, len(products))
+	for _, product := range products {
+		productResponses = append(productResponses, *uc.toProductResponse(product))
+	}
+
+	totalPages := int(total) / pageSize
+	if int(total)%pageSize > 0 {
+		totalPages++
+	}
+
+	return &dto.ListProductsResponse{
+		Products:   productResponses,
+		Total:      total,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// toProductResponse converts entity.Product to dto.ProductResponse
+func (uc *ProductUseCase) toProductResponse(product *entity.Product) *dto.ProductResponse {
+	return &dto.ProductResponse{
+		ID:          product.ID.String(),
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		Stock:       product.Stock,
+		IsActive:    product.IsActive,
+		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
+	}
+}
+```
+
+**Best Practices:**
+- Use case berisi business logic
+- Validasi input (page, pageSize, dll)
+- Convert entity ke DTO untuk response
+- Gunakan domain errors untuk error handling
+
+**Jangan lupa tambahkan error di `internal/domain/errors/errors.go`:**
+```go
+ErrProductNotFound = errors.New("product not found")
+```
+
+---
+
+### **Step 6: Create HTTP Handler**
+
+Buat handler di `internal/interfaces/http/handler/product_handler.go`:
+
+```go
+package handler
+
+import (
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/your-org/go-backend-starter/internal/application/dto"
+	"github.com/your-org/go-backend-starter/internal/application/usecase"
+	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
+)
+
+// ProductHandler handles product management requests
+type ProductHandler struct {
+	productUseCase *usecase.ProductUseCase
+}
+
+// NewProductHandler creates a new product handler
+func NewProductHandler(productUseCase *usecase.ProductUseCase) *ProductHandler {
+	return &ProductHandler{
+		productUseCase: productUseCase,
+	}
+}
+
+// CreateProduct handles product creation
+func (h *ProductHandler) CreateProduct(c *gin.Context) {
+	var req dto.CreateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
+		return
+	}
+
+	resp, err := h.productUseCase.CreateProduct(c.Request.Context(), req)
+	if err != nil {
+		switch err {
+		default:
+			response.ErrorInternalServer(c, "Failed to create product", err.Error())
+		}
+		return
+	}
+
+	response.SuccessCreated(c, resp, "Product created successfully")
+}
+
+// GetProduct handles getting a product by ID
+func (h *ProductHandler) GetProduct(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid product ID", err.Error())
+		return
+	}
+
+	resp, err := h.productUseCase.GetProductByID(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case domainErrors.ErrProductNotFound:
+			response.ErrorNotFound(c, "Product not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to get product", err.Error())
+		}
+		return
+	}
+
+	response.SuccessOK(c, resp, "Product retrieved successfully")
+}
+
+// UpdateProduct handles product update
+func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid product ID", err.Error())
+		return
+	}
+
+	var req dto.UpdateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
+		return
+	}
+
+	resp, err := h.productUseCase.UpdateProduct(c.Request.Context(), id, req)
+	if err != nil {
+		switch err {
+		case domainErrors.ErrProductNotFound:
+			response.ErrorNotFound(c, "Product not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to update product", err.Error())
+		}
+		return
+	}
+
+	response.SuccessOK(c, resp, "Product updated successfully")
+}
+
+// DeleteProduct handles product deletion
+func (h *ProductHandler) DeleteProduct(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid product ID", err.Error())
+		return
+	}
+
+	err = h.productUseCase.DeleteProduct(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case domainErrors.ErrProductNotFound:
+			response.ErrorNotFound(c, "Product not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to delete product", err.Error())
+		}
+		return
+	}
+
+	response.SuccessNoContent(c)
+}
+
+// ListProducts handles listing products with pagination
+func (h *ProductHandler) ListProducts(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	resp, err := h.productUseCase.ListProducts(c.Request.Context(), page, pageSize)
+	if err != nil {
+		response.ErrorInternalServer(c, "Failed to list products", err.Error())
+		return
+	}
+
+	response.SuccessOK(c, resp, "Products retrieved successfully")
+}
+```
+
+**Best Practices:**
+- Handler hanya untuk HTTP concerns (parsing request, calling use case, formatting response)
+- Selalu gunakan standardized response helpers
+- Handle error dengan switch case untuk error yang berbeda
+- Parse dan validate input di handler
+
+---
+
+### **Step 7: Add Routes**
+
+Update `internal/interfaces/http/router/router.go`:
+
+```go
+// Update SetupRouter function signature
+func SetupRouter(
+	authHandler *handler.AuthHandler,
+	userHandler *handler.UserHandler,
+	dormitoryHandler *handler.DormitoryHandler,
+	roleHandler *handler.RoleHandler,
+	productHandler *handler.ProductHandler, // Add this
+	authMiddleware *middleware.AuthMiddleware,
+) *gin.Engine {
+	// ... existing code ...
+
+	// Add product routes
+	protected := api.Group("")
+	protected.Use(authMiddleware.RequireAuth())
+	{
+		// ... existing routes ...
+
+		// Product routes
+		products := protected.Group("/products")
+		{
+			products.GET("", productHandler.ListProducts)
+			products.GET("/:id", productHandler.GetProduct)
+			products.POST("", authMiddleware.RequirePermission("product:create"), productHandler.CreateProduct)
+			products.PUT("/:id", authMiddleware.RequirePermission("product:update"), productHandler.UpdateProduct)
+			products.DELETE("/:id", authMiddleware.RequirePermission("product:delete"), productHandler.DeleteProduct)
+		}
+	}
+
+	return router
+}
+```
+
+---
+
+### **Step 8: Register in main.go**
+
+Update `cmd/main.go`:
+
+```go
+// Initialize repositories
+productRepo := infraRepo.NewProductRepository()
+// ... existing repos ...
+
+// Initialize use cases
+productUseCase := usecase.NewProductUseCase(productRepo)
+// ... existing use cases ...
+
+// Initialize handlers
+productHandler := handler.NewProductHandler(productUseCase)
+// ... existing handlers ...
+
+// Setup router
+r := router.SetupRouter(
+	authHandler, 
+	userHandler, 
+	dormitoryHandler, 
+	roleHandler,
+	productHandler, // Add this
+	authMiddleware,
+)
+```
+
+---
+
+### **Step 9: Add Migration**
+
+Update `internal/infrastructure/database/migrations.go`:
+
+```go
+// Add new migration in init() function
+RegisterMigration(
+	"003_create_products_table",
+	"Create products table",
+	func(db *gorm.DB) error {
+		return db.AutoMigrate(&entity.Product{})
+	},
+	func(db *gorm.DB) error {
+		return db.Migrator().DropTable(&entity.Product{})
+	},
+)
+```
+
+---
+
+### **Step 10: Add Permissions (Optional)**
+
+Jika fitur memerlukan permission, tambahkan di seed (`cmd/seed/main.go`):
+
+```go
+// Add product permissions
+{ID: uuid.New(), Name: "product:read", Slug: "product-read", Resource: "product", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+{ID: uuid.New(), Name: "product:create", Slug: "product-create", Resource: "product", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+{ID: uuid.New(), Name: "product:update", Slug: "product-update", Resource: "product", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+{ID: uuid.New(), Name: "product:delete", Slug: "product-delete", Resource: "product", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+```
+
+---
+
+### **Step 11: Testing**
+
+Buat test file di `internal/application/usecase/product_usecase_test.go`:
+
+```go
+package usecase
+
+import (
+	"context"
+	"testing"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/your-org/go-backend-starter/internal/application/dto"
+	"github.com/your-org/go-backend-starter/internal/application/usecase/mocks"
+	"github.com/your-org/go-backend-starter/internal/domain/entity"
+	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+)
+
+func TestProductUseCase_CreateProduct(t *testing.T) {
+	// Setup
+	mockRepo := new(mocks.MockProductRepository)
+	uc := NewProductUseCase(mockRepo)
+
+	req := dto.CreateProductRequest{
+		Name:        "Test Product",
+		Description: "Test Description",
+		Price:       100.0,
+		Stock:       10,
+	}
+
+	// Mock expectations
+	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.Product")).Return(nil)
+
+	// Execute
+	result, err := uc.CreateProduct(context.Background(), req)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, req.Name, result.Name)
+	mockRepo.AssertExpectations(t)
+}
+```
+
+---
+
+### **📝 Checklist Menambahkan Fitur Baru**
+
+- [ ] 1. Buat entity di `internal/domain/entity/`
+- [ ] 2. Buat repository interface di `internal/domain/repository/`
+- [ ] 3. Implement repository di `internal/infrastructure/repository/`
+- [ ] 4. Buat DTOs di `internal/application/dto/`
+- [ ] 5. Buat use case di `internal/application/usecase/`
+- [ ] 6. Tambahkan domain errors jika diperlukan
+- [ ] 7. Buat handler di `internal/interfaces/http/handler/`
+- [ ] 8. Tambahkan routes di `internal/interfaces/http/router/router.go`
+- [ ] 9. Register di `cmd/main.go`
+- [ ] 10. Tambahkan migration di `internal/infrastructure/database/migrations.go`
+- [ ] 11. Tambahkan permissions di seed (jika diperlukan)
+- [ ] 12. Buat unit tests
+- [ ] 13. Update README dengan dokumentasi endpoint baru
+
+---
+
+### **🎯 Best Practices**
+
+1. **Separation of Concerns**: Setiap layer hanya fokus pada concern-nya sendiri
+2. **Dependency Rule**: Inner layer tidak boleh bergantung pada outer layer
+3. **Use Interfaces**: Repository interface di domain, implementasi di infrastructure
+4. **Error Handling**: Gunakan domain errors untuk error yang konsisten
+5. **Standardized Response**: Selalu gunakan response helpers untuk konsistensi
+6. **Validation**: Validasi input di handler dan use case
+7. **Context**: Selalu gunakan context untuk cancellation dan timeout
+8. **Testing**: Buat test untuk use case dan handler
+
+---
+
+### **🔍 Contoh Alur Request**
+
+```
+1. HTTP Request → Handler (parse request, validate)
+2. Handler → Use Case (business logic)
+3. Use Case → Repository Interface (port)
+4. Repository Implementation → Database (adapter)
+5. Database → Repository Implementation
+6. Repository Implementation → Use Case
+7. Use Case → Handler (convert to DTO)
+8. Handler → HTTP Response (standardized format)
+```
+
+---
+
+### **📚 Referensi File Structure**
+
+```
+internal/
+├── domain/
+│   ├── entity/
+│   │   └── product.go          # Step 1
+│   ├── repository/
+│   │   └── product_repository.go # Step 2
+│   └── errors/
+│       └── errors.go            # Add errors
+├── application/
+│   ├── dto/
+│   │   └── product_dto.go       # Step 4
+│   └── usecase/
+│       └── product_usecase.go   # Step 5
+├── infrastructure/
+│   ├── repository/
+│   │   └── product_repository.go # Step 3
+│   └── database/
+│       └── migrations.go        # Step 9
+└── interfaces/
+    └── http/
+        ├── handler/
+        │   └── product_handler.go # Step 6
+        └── router/
+            └── router.go          # Step 7
+```
+
+---
+
+### **💡 Tips**
+
+- **Mulai dari Domain**: Selalu mulai dari domain layer (entity, repository interface)
+- **Test Incrementally**: Test setiap layer setelah dibuat
+- **Follow Naming Convention**: Gunakan naming yang konsisten
+- **Document Complex Logic**: Tambahkan comment untuk logic yang kompleks
+- **Keep It Simple**: Jangan over-engineer, mulai dengan yang sederhana
 
 ### Using Standardized Responses
 
