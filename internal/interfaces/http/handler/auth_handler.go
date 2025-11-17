@@ -1,12 +1,11 @@
 package handler
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
 )
 
 // AuthHandler handles authentication requests
@@ -35,22 +34,22 @@ func NewAuthHandler(authUseCase *usecase.AuthUseCase) *AuthHandler {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-		response, err := h.authUseCase.Register(c.Request.Context(), req)
+		resp, err := h.authUseCase.Register(c.Request.Context(), req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrUserAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "user already exists"})
+			response.ErrorConflict(c, "User already exists")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register user"})
+			response.ErrorInternalServer(c, "Failed to register user", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	response.SuccessCreated(c, resp, "User registered successfully")
 }
 
 // Login handles user login
@@ -67,22 +66,22 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-		response, err := h.authUseCase.Login(c.Request.Context(), req)
+		resp, err := h.authUseCase.Login(c.Request.Context(), req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrInvalidCredentials, domainErrors.ErrUserInactive:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			response.ErrorUnauthorized(c, "Invalid credentials")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to login"})
+			response.ErrorInternalServer(c, "Failed to login", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Login successful")
 }
 
 // RefreshToken handles token refresh
@@ -99,20 +98,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-		response, err := h.authUseCase.RefreshToken(c.Request.Context(), req)
+		resp, err := h.authUseCase.RefreshToken(c.Request.Context(), req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrInvalidToken, domainErrors.ErrTokenExpired:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			response.ErrorUnauthorized(c, "Invalid or expired token")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to refresh token"})
+			response.ErrorInternalServer(c, "Failed to refresh token", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Token refreshed successfully")
 }

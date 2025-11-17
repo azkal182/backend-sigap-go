@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +8,7 @@ import (
 	"github.com/your-org/go-backend-starter/internal/application/dto"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
 )
 
 // DormitoryHandler handles dormitory management requests
@@ -38,17 +38,17 @@ func NewDormitoryHandler(dormitoryUseCase *usecase.DormitoryUseCase) *DormitoryH
 func (h *DormitoryHandler) CreateDormitory(c *gin.Context) {
 	var req dto.CreateDormitoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-	response, err := h.dormitoryUseCase.CreateDormitory(c.Request.Context(), req)
+	resp, err := h.dormitoryUseCase.CreateDormitory(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create dormitory"})
+		response.ErrorInternalServer(c, "Failed to create dormitory", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	response.SuccessCreated(c, resp, "Dormitory created successfully")
 }
 
 // GetDormitory handles getting a dormitory by ID
@@ -68,22 +68,22 @@ func (h *DormitoryHandler) GetDormitory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dormitory id"})
+		response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
 		return
 	}
 
-	response, err := h.dormitoryUseCase.GetDormitoryByID(c.Request.Context(), id)
+	resp, err := h.dormitoryUseCase.GetDormitoryByID(c.Request.Context(), id)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrDormitoryNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "dormitory not found"})
+			response.ErrorNotFound(c, "Dormitory not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get dormitory"})
+			response.ErrorInternalServer(c, "Failed to get dormitory", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Dormitory retrieved successfully")
 }
 
 // UpdateDormitory handles dormitory update
@@ -104,28 +104,28 @@ func (h *DormitoryHandler) UpdateDormitory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dormitory id"})
+		response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
 		return
 	}
 
 	var req dto.UpdateDormitoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-	response, err := h.dormitoryUseCase.UpdateDormitory(c.Request.Context(), id, req)
+	resp, err := h.dormitoryUseCase.UpdateDormitory(c.Request.Context(), id, req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrDormitoryNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "dormitory not found"})
+			response.ErrorNotFound(c, "Dormitory not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update dormitory"})
+			response.ErrorInternalServer(c, "Failed to update dormitory", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Dormitory updated successfully")
 }
 
 // DeleteDormitory handles dormitory deletion
@@ -145,7 +145,7 @@ func (h *DormitoryHandler) DeleteDormitory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dormitory id"})
+		response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
 		return
 	}
 
@@ -153,14 +153,14 @@ func (h *DormitoryHandler) DeleteDormitory(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case domainErrors.ErrDormitoryNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "dormitory not found"})
+			response.ErrorNotFound(c, "Dormitory not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete dormitory"})
+			response.ErrorInternalServer(c, "Failed to delete dormitory", err.Error())
 		}
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.SuccessNoContent(c)
 }
 
 // ListDormitories handles listing dormitories with pagination
@@ -179,11 +179,11 @@ func (h *DormitoryHandler) ListDormitories(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	response, err := h.dormitoryUseCase.ListDormitories(c.Request.Context(), page, pageSize)
+	resp, err := h.dormitoryUseCase.ListDormitories(c.Request.Context(), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list dormitories"})
+		response.ErrorInternalServer(c, "Failed to list dormitories", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Dormitories retrieved successfully")
 }

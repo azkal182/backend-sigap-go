@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +8,7 @@ import (
 	"github.com/your-org/go-backend-starter/internal/application/dto"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
 )
 
 // UserHandler handles user management requests
@@ -39,22 +39,22 @@ func NewUserHandler(userUseCase *usecase.UserUseCase) *UserHandler {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-	response, err := h.userUseCase.CreateUser(c.Request.Context(), req)
+	resp, err := h.userUseCase.CreateUser(c.Request.Context(), req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrUserAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "user already exists"})
+			response.ErrorConflict(c, "User already exists")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+			response.ErrorInternalServer(c, "Failed to create user", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	response.SuccessCreated(c, resp, "User created successfully")
 }
 
 // GetUser handles getting a user by ID
@@ -73,22 +73,22 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
 		return
 	}
 
-	response, err := h.userUseCase.GetUserByID(c.Request.Context(), id)
+	resp, err := h.userUseCase.GetUserByID(c.Request.Context(), id)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrUserNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			response.ErrorNotFound(c, "User not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user"})
+			response.ErrorInternalServer(c, "Failed to get user", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "User retrieved successfully")
 }
 
 // UpdateUser handles user update
@@ -108,30 +108,30 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
 		return
 	}
 
 	var req dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorBadRequest(c, "Invalid request body", err.Error())
 		return
 	}
 
-	response, err := h.userUseCase.UpdateUser(c.Request.Context(), id, req)
+	resp, err := h.userUseCase.UpdateUser(c.Request.Context(), id, req)
 	if err != nil {
 		switch err {
 		case domainErrors.ErrUserNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			response.ErrorNotFound(c, "User not found")
 		case domainErrors.ErrUserAlreadyExists:
-			c.JSON(http.StatusConflict, gin.H{"error": "email already taken"})
+			response.ErrorConflict(c, "Email already taken")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
+			response.ErrorInternalServer(c, "Failed to update user", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "User updated successfully")
 }
 
 // DeleteUser handles user deletion
@@ -150,7 +150,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
 		return
 	}
 
@@ -158,14 +158,14 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case domainErrors.ErrUserNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			response.ErrorNotFound(c, "User not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete user"})
+			response.ErrorInternalServer(c, "Failed to delete user", err.Error())
 		}
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.SuccessNoContent(c)
 }
 
 // ListUsers handles listing users with pagination
@@ -184,11 +184,11 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	response, err := h.userUseCase.ListUsers(c.Request.Context(), page, pageSize)
+	resp, err := h.userUseCase.ListUsers(c.Request.Context(), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list users"})
+		response.ErrorInternalServer(c, "Failed to list users", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	response.SuccessOK(c, resp, "Users retrieved successfully")
 }

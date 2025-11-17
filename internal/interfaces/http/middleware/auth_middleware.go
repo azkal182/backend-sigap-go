@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +9,7 @@ import (
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
 	"github.com/your-org/go-backend-starter/internal/domain/repository"
 	"github.com/your-org/go-backend-starter/internal/domain/service"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
 )
 
 // AuthMiddleware handles JWT authentication
@@ -34,7 +34,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header required"})
+			response.ErrorUnauthorized(c, "Authorization header required")
 			c.Abort()
 			return
 		}
@@ -42,7 +42,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		// Extract token from "Bearer <token>"
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+			response.ErrorUnauthorized(c, "Invalid authorization header format")
 			c.Abort()
 			return
 		}
@@ -53,9 +53,9 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		claims, err := m.tokenService.ValidateToken(tokenString)
 		if err != nil {
 			if err == domainErrors.ErrTokenExpired {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
+				response.ErrorUnauthorized(c, "Token expired")
 			} else {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+				response.ErrorUnauthorized(c, "Invalid token")
 			}
 			c.Abort()
 			return
@@ -64,14 +64,14 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		// Get user with roles and dormitories
 		user, err := m.userRepo.GetWithRolesAndDormitories(c.Request.Context(), claims.UserID)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+			response.ErrorUnauthorized(c, "User not found")
 			c.Abort()
 			return
 		}
 
 		// Check if user is active
 		if !user.IsActive {
-			c.JSON(http.StatusForbidden, gin.H{"error": "user is inactive"})
+			response.ErrorForbidden(c, "User is inactive")
 			c.Abort()
 			return
 		}
@@ -98,21 +98,21 @@ func (m *AuthMiddleware) RequirePermission(permission string) gin.HandlerFunc {
 		// Get user from context
 		user, exists := c.Get("user")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found in context"})
+			response.ErrorUnauthorized(c, "User not found in context")
 			c.Abort()
 			return
 		}
 
 		userEntity, ok := user.(*entity.User)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user type"})
+			response.ErrorInternalServer(c, "Invalid user type")
 			c.Abort()
 			return
 		}
 
 		// Check permission
 		if !userEntity.HasPermission(permission) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+			response.ErrorForbidden(c, "Permission denied")
 			c.Abort()
 			return
 		}
@@ -138,14 +138,14 @@ func (m *AuthMiddleware) RequireDormitoryAccess() gin.HandlerFunc {
 		}
 
 		if dormitoryIDStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "dormitory id required"})
+			response.ErrorBadRequest(c, "Dormitory ID required")
 			c.Abort()
 			return
 		}
 
 		dormitoryID, err := uuid.Parse(dormitoryIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dormitory id"})
+			response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
 			c.Abort()
 			return
 		}
@@ -153,21 +153,21 @@ func (m *AuthMiddleware) RequireDormitoryAccess() gin.HandlerFunc {
 		// Get user from context
 		user, exists := c.Get("user")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found in context"})
+			response.ErrorUnauthorized(c, "User not found in context")
 			c.Abort()
 			return
 		}
 
 		userEntity, ok := user.(*entity.User)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user type"})
+			response.ErrorInternalServer(c, "Invalid user type")
 			c.Abort()
 			return
 		}
 
 		// Check if user can access this dormitory
 		if !userEntity.CanAccessDormitory(dormitoryID) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "access denied to this dormitory"})
+			response.ErrorForbidden(c, "Access denied to this dormitory")
 			c.Abort()
 			return
 		}

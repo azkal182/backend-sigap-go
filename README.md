@@ -30,6 +30,12 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
   - **Access to specific dormitories only** — staff hanya dapat mengelola dormitory tertentu
   - **Access to all dormitories** — admin dapat mengelola seluruh dormitory
 
+### 6. Standardized API Response
+- ✅ Response format yang konsisten untuk semua endpoint
+- ✅ Success response dengan struktur standar
+- ✅ Error response dengan struktur standar
+- ✅ Helper functions untuk berbagai HTTP status codes
+
 ## 📁 Struktur Project (Hexagonal Architecture)
 
 ```
@@ -55,6 +61,7 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 │       └── http/
 │           ├── handler/     # HTTP handlers
 │           ├── middleware/  # HTTP middleware
+│           ├── response/    # Standardized response helpers
 │           └── router/       # Route configuration
 ├── go.mod
 ├── go.sum
@@ -88,6 +95,7 @@ Controller/handler HTTP:
 - Permission checker middleware
 - Dormitory guard middleware
 - Mapping request/response ke DTO
+- Standardized response format untuk semua endpoint
 
 ## 🔐 Flow Authorization
 
@@ -204,6 +212,68 @@ Server akan berjalan di `http://localhost:8080`
 ### Health Check
 - `GET /health` - Health check endpoint
 
+## 📤 API Response Format
+
+Semua endpoint menggunakan format response yang standar untuk memastikan konsistensi dan kemudahan integrasi.
+
+### Success Response
+
+Format response sukses mengikuti struktur berikut:
+
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": {
+    // Response data sesuai endpoint
+  }
+}
+```
+
+**Contoh:**
+- `200 OK` - `SuccessOK()` - untuk GET, PUT yang berhasil
+- `201 Created` - `SuccessCreated()` - untuk POST yang berhasil
+- `204 No Content` - `SuccessNoContent()` - untuk DELETE yang berhasil
+
+### Error Response
+
+Format response error mengikuti struktur berikut:
+
+```json
+{
+  "success": false,
+  "message": "User not found",
+  "error": "optional error detail"
+}
+```
+
+**HTTP Status Codes:**
+- `400 Bad Request` - `ErrorBadRequest()` - Request tidak valid
+- `401 Unauthorized` - `ErrorUnauthorized()` - Tidak terautentikasi
+- `403 Forbidden` - `ErrorForbidden()` - Tidak memiliki izin
+- `404 Not Found` - `ErrorNotFound()` - Resource tidak ditemukan
+- `409 Conflict` - `ErrorConflict()` - Konflik data (misal: email sudah terdaftar)
+- `500 Internal Server Error` - `ErrorInternalServer()` - Error server
+
+### Response Helper Functions
+
+Semua helper functions tersedia di package `internal/interfaces/http/response`:
+
+```go
+// Success responses
+response.SuccessOK(c, data, "message")
+response.SuccessCreated(c, data, "message")
+response.SuccessNoContent(c)
+
+// Error responses
+response.ErrorBadRequest(c, "message", "errorDetail")
+response.ErrorUnauthorized(c, "message", "errorDetail")
+response.ErrorForbidden(c, "message", "errorDetail")
+response.ErrorNotFound(c, "message", "errorDetail")
+response.ErrorConflict(c, "message", "errorDetail")
+response.ErrorInternalServer(c, "message", "errorDetail")
+```
+
 ## 🔑 Authentication
 
 ### Register
@@ -230,15 +300,28 @@ curl -X POST http://localhost:8080/api/auth/login \
 Response:
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_at": "2024-01-01T12:15:00Z",
-  "user": {
-    "id": "uuid",
-    "email": "admin@example.com",
-    "name": "Admin User",
-    "roles": ["admin"]
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2024-01-01T12:15:00Z",
+    "user": {
+      "id": "uuid",
+      "email": "admin@example.com",
+      "name": "Admin User",
+      "roles": ["admin"]
+    }
   }
+}
+```
+
+**Error Response Example:**
+```json
+{
+  "success": false,
+  "message": "Invalid credentials",
+  "error": ""
 }
 ```
 
@@ -311,6 +394,23 @@ make build
 4. Create use case in `internal/application/usecase/`
 5. Create handler in `internal/interfaces/http/handler/`
 6. Add routes in `internal/interfaces/http/router/router.go`
+7. **Gunakan standardized response helpers** dari `internal/interfaces/http/response` untuk semua response
+
+### Using Standardized Responses
+
+Saat membuat handler baru, selalu gunakan helper functions dari package `response`:
+
+```go
+import "github.com/your-org/go-backend-starter/internal/interfaces/http/response"
+
+// Success response
+response.SuccessOK(c, data, "Operation successful")
+response.SuccessCreated(c, data, "Resource created")
+
+// Error response
+response.ErrorBadRequest(c, "Invalid input", err.Error())
+response.ErrorNotFound(c, "Resource not found")
+```
 
 ## 📝 License
 

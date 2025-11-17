@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/your-org/go-backend-starter/internal/interfaces/http/handler"
 	"github.com/your-org/go-backend-starter/internal/interfaces/http/middleware"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/response"
 )
 
 // SetupRouter configures all routes
@@ -17,7 +18,7 @@ func SetupRouter(
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		response.SuccessOK(c, gin.H{"status": "ok"}, "Service is healthy")
 	})
 
 	// API routes
