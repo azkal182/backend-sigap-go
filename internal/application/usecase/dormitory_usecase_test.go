@@ -24,13 +24,11 @@ func TestDormitoryUseCase_CreateDormitory(t *testing.T) {
 			name: "success - create dormitory",
 			req: dto.CreateDormitoryRequest{
 				Name:        "Test Dormitory",
-				Address:     "123 Test St",
 				Description: "A test dormitory",
-				Capacity:    100,
 			},
 			setupMocks: func(dormRepo *mocks.MockDormitoryRepository) {
 				dormRepo.On("Create", mock.Anything, mock.MatchedBy(func(d *entity.Dormitory) bool {
-					return d.Name == "Test Dormitory" && d.Address == "123 Test St" && d.Capacity == 100
+					return d.Name == "Test Dormitory" && d.Description == "A test dormitory"
 				})).Return(nil)
 			},
 			expectedError: nil,
@@ -54,8 +52,6 @@ func TestDormitoryUseCase_CreateDormitory(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
 				assert.Equal(t, tt.req.Name, resp.Name)
-				assert.Equal(t, tt.req.Address, resp.Address)
-				assert.Equal(t, tt.req.Capacity, resp.Capacity)
 			}
 
 			dormRepo.AssertExpectations(t)
@@ -79,9 +75,7 @@ func TestDormitoryUseCase_GetDormitoryByID(t *testing.T) {
 				dormRepo.On("GetByID", mock.Anything, dormitoryID).Return(&entity.Dormitory{
 					ID:          dormitoryID,
 					Name:        "Test Dormitory",
-					Address:     "123 Test St",
 					Description: "A test dormitory",
-					Capacity:    100,
 					IsActive:    true,
 				}, nil)
 			},
@@ -139,10 +133,8 @@ func TestDormitoryUseCase_UpdateDormitory(t *testing.T) {
 			},
 			setupMocks: func(dormRepo *mocks.MockDormitoryRepository) {
 				dormRepo.On("GetByID", mock.Anything, dormitoryID).Return(&entity.Dormitory{
-					ID:       dormitoryID,
-					Name:     "Old Name",
-					Address:  "123 Test St",
-					Capacity: 100,
+					ID:   dormitoryID,
+					Name: "Old Name",
 				}, nil)
 				dormRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},

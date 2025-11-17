@@ -248,9 +248,7 @@ func main() {
 		{
 			ID:          uuid.New(),
 			Name:        "Dormitory A",
-			Address:     "123 Main Street",
 			Description: "Main dormitory building",
-			Capacity:    100,
 			IsActive:    true,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
@@ -258,9 +256,7 @@ func main() {
 		{
 			ID:          uuid.New(),
 			Name:        "Dormitory B",
-			Address:     "456 Oak Avenue",
 			Description: "Secondary dormitory building",
-			Capacity:    80,
 			IsActive:    true,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),

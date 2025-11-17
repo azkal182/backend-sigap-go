@@ -120,4 +120,44 @@ func init() {
 			return nil
 		},
 	)
+
+	// Migration 003: Remove address and capacity from dormitories
+	RegisterMigration(
+		"003_remove_dormitory_address_and_capacity",
+		"Remove address and capacity columns from dormitories table",
+		func(db *gorm.DB) error {
+			// Drop address column if it exists
+			if db.Migrator().HasColumn(&entity.Dormitory{}, "address") {
+				if err := db.Migrator().DropColumn(&entity.Dormitory{}, "address"); err != nil {
+					return err
+				}
+			}
+
+			// Drop capacity column if it exists
+			if db.Migrator().HasColumn(&entity.Dormitory{}, "capacity") {
+				if err := db.Migrator().DropColumn(&entity.Dormitory{}, "capacity"); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+		func(db *gorm.DB) error {
+			// Rollback: re-add address column if it does not exist
+			if !db.Migrator().HasColumn(&entity.Dormitory{}, "address") {
+				if err := db.Migrator().AddColumn(&entity.Dormitory{}, "address"); err != nil {
+					return err
+				}
+			}
+
+			// Rollback: re-add capacity column if it does not exist
+			if !db.Migrator().HasColumn(&entity.Dormitory{}, "capacity") {
+				if err := db.Migrator().AddColumn(&entity.Dormitory{}, "capacity"); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	)
 }

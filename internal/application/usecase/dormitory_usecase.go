@@ -33,9 +33,7 @@ func (uc *DormitoryUseCase) CreateDormitory(ctx context.Context, req dto.CreateD
 	dormitory := &entity.Dormitory{
 		ID:          uuid.New(),
 		Name:        req.Name,
-		Address:     req.Address,
 		Description: req.Description,
-		Capacity:    req.Capacity,
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -68,14 +66,8 @@ func (uc *DormitoryUseCase) UpdateDormitory(ctx context.Context, id uuid.UUID, r
 	if req.Name != "" {
 		dormitory.Name = req.Name
 	}
-	if req.Address != "" {
-		dormitory.Address = req.Address
-	}
 	if req.Description != "" {
 		dormitory.Description = req.Description
-	}
-	if req.Capacity != nil {
-		dormitory.Capacity = *req.Capacity
 	}
 	if req.IsActive != nil {
 		dormitory.IsActive = *req.IsActive
@@ -143,9 +135,7 @@ func (uc *DormitoryUseCase) toDormitoryResponse(dormitory *entity.Dormitory) *dt
 	return &dto.DormitoryResponse{
 		ID:          dormitory.ID.String(),
 		Name:        dormitory.Name,
-		Address:     dormitory.Address,
 		Description: dormitory.Description,
-		Capacity:    dormitory.Capacity,
 		IsActive:    dormitory.IsActive,
 		CreatedAt:   dormitory.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   dormitory.UpdatedAt.Format(time.RFC3339),

@@ -8,14 +8,12 @@ import (
 
 // Dormitory represents a dormitory entity in the domain
 type Dormitory struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Address     string    `json:"address"`
-	Description string    `json:"description"`
-	Capacity    int       `json:"capacity"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 
 	// Relations

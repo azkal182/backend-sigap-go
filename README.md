@@ -188,6 +188,7 @@ make migrate-down
 - Migrations akan otomatis berjalan saat aplikasi start
 - Migration 001: Membuat schema database awal
 - Migration 002: Menambahkan field `is_protected` pada roles table dan seed default roles
+- Migration 003: Menghapus kolom `address` dan `capacity` dari tabel `dormitories` (schema dormitory sekarang hanya memuat `name`, `description`, `is_active`, timestamps, dan relasi)
 - Default roles yang dibuat: `user`, `admin`, `super_admin`
 - Role `admin` dan `super_admin` adalah protected roles
 

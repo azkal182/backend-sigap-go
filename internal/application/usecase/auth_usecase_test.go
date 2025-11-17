@@ -39,19 +39,18 @@ func TestAuthUseCase_Register(t *testing.T) {
 					return u.Email == "newuser@example.com" && u.Name == "New User"
 				})).Return(nil)
 
-				// Get user with roles
-				userID := uuid.New()
+				// Get user with roles (user ID akan di-generate di dalam use case)
 				userRepo.On("GetWithRoles", mock.Anything, mock.Anything).Return(&entity.User{
-					ID:       userID,
+					ID:       uuid.New(),
 					Email:    "newuser@example.com",
 					Name:     "New User",
 					IsActive: true,
 					Roles:    []entity.Role{},
 				}, nil)
 
-				// Generate tokens
-				tokenService.On("GenerateAccessToken", userID, "newuser@example.com", []string{}).Return("access_token", nil)
-				tokenService.On("GenerateRefreshToken", userID).Return("refresh_token", nil)
+				// Generate tokens (tidak mengikat ke UUID tertentu)
+				tokenService.On("GenerateAccessToken", mock.Anything, "newuser@example.com", []string{}).Return("access_token", nil)
+				tokenService.On("GenerateRefreshToken", mock.Anything).Return("refresh_token", nil)
 			},
 			expectedError: nil,
 		},
@@ -101,7 +100,7 @@ func TestAuthUseCase_Register(t *testing.T) {
 
 func TestAuthUseCase_Login(t *testing.T) {
 	userID := uuid.New()
-	
+
 	// Create a user with properly hashed password for testing
 	testUser := &entity.User{
 		ID:       userID,
