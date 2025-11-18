@@ -15,12 +15,15 @@ func SetupRouter(
 	roleHandler *handler.RoleHandler,
 	locationHandler *handler.LocationHandler,
 	permissionHandler *handler.PermissionHandler,
+	auditLogHandler *handler.AuditLogHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
 
 	// Global CORS middleware so all routes are covered
 	router.Use(middleware.NewCORSMiddlewareFromEnv())
+	// Audit context middleware to enrich context for audit logging
+	router.Use(middleware.AuditContextMiddleware())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -54,6 +57,12 @@ func SetupRouter(
 		{
 			// Current user
 			protected.GET("/me", userHandler.Me)
+
+			// Audit log routes (read-only)
+			auditLogs := protected.Group("/audit-logs")
+			{
+				auditLogs.GET("", authMiddleware.RequirePermission("audit:read"), auditLogHandler.ListAuditLogs)
+			}
 
 			// User routes
 			users := protected.Group("/users")

@@ -13,6 +13,12 @@ import (
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
 )
 
+type noopAuditLogger struct{}
+
+func (n *noopAuditLogger) Log(ctx context.Context, resource, action, targetID string, metadata map[string]string) error {
+	return nil
+}
+
 func TestUserUseCase_CreateUser(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -99,7 +105,8 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 			roleRepo := new(mocks.MockRoleRepository)
 			tt.setupMocks(userRepo, roleRepo)
 
-			userUseCase := NewUserUseCase(userRepo, roleRepo)
+			auditLogger := &noopAuditLogger{}
+			userUseCase := NewUserUseCase(userRepo, roleRepo, auditLogger)
 			resp, err := userUseCase.CreateUser(context.Background(), tt.req)
 
 			if tt.expectedError != nil {
@@ -157,8 +164,8 @@ func TestUserUseCase_GetUserByID(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			roleRepo := new(mocks.MockRoleRepository)
 			tt.setupMocks(userRepo)
-
-			userUseCase := NewUserUseCase(userRepo, roleRepo)
+			auditLogger := &noopAuditLogger{}
+			userUseCase := NewUserUseCase(userRepo, roleRepo, auditLogger)
 			resp, err := userUseCase.GetUserByID(context.Background(), tt.userID)
 
 			if tt.expectedError != nil {
@@ -247,8 +254,8 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			roleRepo := new(mocks.MockRoleRepository)
 			tt.setupMocks(userRepo, roleRepo)
-
-			userUseCase := NewUserUseCase(userRepo, roleRepo)
+			auditLogger := &noopAuditLogger{}
+			userUseCase := NewUserUseCase(userRepo, roleRepo, auditLogger)
 			resp, err := userUseCase.UpdateUser(context.Background(), tt.userID, tt.req)
 
 			if tt.expectedError != nil {
@@ -302,7 +309,8 @@ func TestUserUseCase_DeleteUser(t *testing.T) {
 			roleRepo := new(mocks.MockRoleRepository)
 			tt.setupMocks(userRepo)
 
-			userUseCase := NewUserUseCase(userRepo, roleRepo)
+			auditLogger := &noopAuditLogger{}
+			userUseCase := NewUserUseCase(userRepo, roleRepo, auditLogger)
 			err := userUseCase.DeleteUser(context.Background(), tt.userID)
 
 			if tt.expectedError != nil {
@@ -370,7 +378,8 @@ func TestUserUseCase_ListUsers(t *testing.T) {
 			roleRepo := new(mocks.MockRoleRepository)
 			tt.setupMocks(userRepo)
 
-			userUseCase := NewUserUseCase(userRepo, roleRepo)
+			auditLogger := &noopAuditLogger{}
+			userUseCase := NewUserUseCase(userRepo, roleRepo, auditLogger)
 			resp, err := userUseCase.ListUsers(context.Background(), tt.page, tt.pageSize)
 
 			if tt.expectedError != nil {

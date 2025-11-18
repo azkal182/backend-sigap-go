@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	"github.com/your-org/go-backend-starter/internal/infrastructure/database"
 	infraRepo "github.com/your-org/go-backend-starter/internal/infrastructure/repository"
@@ -36,6 +37,7 @@ func main() {
 	roleRepo := infraRepo.NewRoleRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
+	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
 	regencyRepo := infraRepo.NewRegencyRepository()
 	districtRepo := infraRepo.NewDistrictRepository()
@@ -43,13 +45,15 @@ func main() {
 
 	// Initialize services
 	tokenService := infraService.NewJWTService()
+	auditLogger := service.NewAuditLogger(auditLogRepo)
 
 	// Initialize use cases
 	authUseCase := usecase.NewAuthUseCase(userRepo, tokenService)
-	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo)
-	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
-	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
+	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
+	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
+	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
+	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
 
 	// Initialize handlers
@@ -59,12 +63,13 @@ func main() {
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
+	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
-	// Setup router (includes global CORS middleware inside SetupRouter)
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, authMiddleware)
+	// Setup router (includes global CORS & audit context middleware inside SetupRouter)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, authMiddleware)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

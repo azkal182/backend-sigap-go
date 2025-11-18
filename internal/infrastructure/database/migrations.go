@@ -236,4 +236,16 @@ func init() {
 			return nil
 		},
 	)
+
+	// Migration 006: Create audit_logs table
+	RegisterMigration(
+		"006_create_audit_logs",
+		"Create audit_logs table for audit logging",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(&entity.AuditLog{})
+		},
+		func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&entity.AuditLog{})
+		},
+	)
 }

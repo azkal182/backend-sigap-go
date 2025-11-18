@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
+	appService "github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
 	"github.com/your-org/go-backend-starter/internal/domain/repository"
@@ -13,18 +14,21 @@ import (
 
 // UserUseCase handles user management use cases
 type UserUseCase struct {
-	userRepo repository.UserRepository
-	roleRepo repository.RoleRepository
+	userRepo    repository.UserRepository
+	roleRepo    repository.RoleRepository
+	auditLogger appService.AuditLogger
 }
 
 // NewUserUseCase creates a new user use case
 func NewUserUseCase(
 	userRepo repository.UserRepository,
 	roleRepo repository.RoleRepository,
+	auditLogger appService.AuditLogger,
 ) *UserUseCase {
 	return &UserUseCase{
-		userRepo: userRepo,
-		roleRepo: roleRepo,
+		userRepo:    userRepo,
+		roleRepo:    roleRepo,
+		auditLogger: auditLogger,
 	}
 }
 
@@ -85,6 +89,12 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest
 	if err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "user", "user:create", user.ID.String(), map[string]string{
+		"email": user.Email,
+		"name":  user.Name,
+	})
 
 	return uc.toUserResponse(userWithRoles), nil
 }
@@ -153,19 +163,35 @@ func (uc *UserUseCase) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upd
 		return nil, domainErrors.ErrInternalServer
 	}
 
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "user", "user:update", user.ID.String(), map[string]string{
+		"email": user.Email,
+		"name":  user.Name,
+	})
+
 	return uc.toUserResponse(userWithRoles), nil
 }
 
 // DeleteUser deletes a user (soft delete)
 func (uc *UserUseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	// Check if user exists
-	_, err := uc.userRepo.GetByID(ctx, id)
+	user, err := uc.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return domainErrors.ErrUserNotFound
 	}
 
 	// Delete user
-	return uc.userRepo.Delete(ctx, id)
+	if err := uc.userRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "user", "user:delete", id.String(), map[string]string{
+		"email": user.Email,
+		"name":  user.Name,
+	})
+
+	return nil
 }
 
 // ListUsers retrieves a paginated list of users

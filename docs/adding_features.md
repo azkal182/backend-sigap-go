@@ -215,3 +215,106 @@ Untuk fitur yang perlu proteksi (bukan public seperti lokasi), ikuti pola beriku
 
 Dengan pola ini, fitur baru akan konsisten dengan sistem authorization yang sudah ada di project.
 
+
+3. **JWT & Guard (opsional)**
+   - Untuk fitur yang perlu akses berbasis resource tertentu (seperti dormitory), gunakan middleware tambahan seperti `RequireDormitoryAccess`.
+
+Dengan pola ini, fitur baru akan konsisten dengan sistem authorization yang sudah ada di project.
+
+---
+
+## 12. (Optional) Audit Logging
+
+Untuk fitur yang mengubah data penting (misalnya CRUD **User**, **Role**, **Dormitory**), kamu bisa menambahkan audit log agar setiap aksi terekam dengan jelas.
+
+### 12.1 Kapan perlu audit log?
+
+- Operasi `create`, `update`, `delete` pada entity penting.
+- Perubahan permission pada role.
+- Aksi administratif lain yang sensitif (misalnya menghapus data penting).
+
+### 12.2 Komponen audit log yang sudah tersedia
+
+Project ini sudah menyediakan:
+
+- Entity `AuditLog` dan tabel `audit_logs` (migration `006_create_audit_logs`).
+- Repository `AuditLogRepository`.
+- Service `AuditLogger` di `internal/application/service/audit_logger.go`.
+- Middleware `AuditContextMiddleware` untuk mengisi informasi HTTP ke `context`.
+- Endpoint baca audit log: `GET /api/audit-logs` (requires permission `audit:read`).
+
+### 12.3 Menggunakan AuditLogger di use case
+
+1. **Inject AuditLogger ke use case**
+
+   Di `cmd/main.go`:
+
+   ```go
+   auditLogRepo := infraRepo.NewAuditLogRepository()
+   auditLogger := service.NewAuditLogger(auditLogRepo)
+
+   userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
+   roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
+   dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
+   ```
+
+2. **Panggil AuditLogger di akhir operasi sukses**
+
+   Contoh di dalam `UserUseCase.CreateUser`:
+
+   ```go
+   _ = uc.auditLogger.Log(ctx, "user", "user:create", user.ID.String(), map[string]string{
+       "email": user.Email,
+       "name":  user.Name,
+   })
+   ```
+
+   Parameter:
+
+   - `resource`: nama resource, misalnya `"user"`, `"role"`, `"dormitory"`.
+   - `action`: aksi spesifik, misalnya `"user:create"`, `"role:delete"`, `"dorm:update"`.
+   - `targetID`: ID entity yang diubah (biasanya `uuid.String()`).
+   - `metadata`: map string kecil yang akan disimpan sebagai JSON (hanya field penting, bukan seluruh payload).
+
+   AuditLogger akan otomatis melengkapi informasi lain dari `context` (path, method, IP, user-agent, status code, actor).
+
+### 12.4 Middleware AuditContext
+
+Pastikan `AuditContextMiddleware` dipasang di router:
+
+```go
+router := gin.Default()
+router.Use(middleware.NewCORSMiddlewareFromEnv())
+router.Use(middleware.AuditContextMiddleware())
+```
+
+Middleware ini mengisi nilai berikut ke dalam `context.Context`:
+
+- `request_path` (FullPath)
+- `request_method`
+- `ip_address`
+- `user_agent`
+- `status_code` (diisi setelah handler selesai)
+
+Sehingga setiap pemanggilan `AuditLogger.Log` akan menyimpan log dengan informasi HTTP yang lengkap.
+
+### 12.5 Permissions untuk baca audit log
+
+Permission `audit:read` sudah ditambahkan di `cmd/seed/main.go` dan diberikan ke role `admin` dan `super_admin`.
+
+Route HTTP:
+
+```text
+GET /api/audit-logs?page=1&page_size=10&resource=user&action=user:create&actor_email=admin@example.com
+```
+
+Route ini menggunakan middleware:
+
+```go
+auditLogs := protected.Group("/audit-logs")
+{
+    auditLogs.GET("", authMiddleware.RequirePermission("audit:read"), auditLogHandler.ListAuditLogs)
+}
+```
+
+Gunakan endpoint ini untuk debug dan monitoring perubahan data penting di sistem.

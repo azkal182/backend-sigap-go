@@ -41,7 +41,8 @@ func TestDormitoryUseCase_CreateDormitory(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			tt.setupMocks(dormRepo)
 
-			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo)
+			auditLogger := &noopAuditLogger{}
+			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
 			resp, err := dormUseCase.CreateDormitory(context.Background(), tt.req)
 
 			if tt.expectedError != nil {
@@ -97,7 +98,8 @@ func TestDormitoryUseCase_GetDormitoryByID(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			tt.setupMocks(dormRepo)
 
-			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo)
+			auditLogger := &noopAuditLogger{}
+			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
 			resp, err := dormUseCase.GetDormitoryByID(context.Background(), tt.dormitoryID)
 
 			if tt.expectedError != nil {
@@ -159,7 +161,8 @@ func TestDormitoryUseCase_UpdateDormitory(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			tt.setupMocks(dormRepo)
 
-			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo)
+			auditLogger := &noopAuditLogger{}
+			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
 			resp, err := dormUseCase.UpdateDormitory(context.Background(), tt.dormitoryID, tt.req)
 
 			if tt.expectedError != nil {
@@ -212,7 +215,8 @@ func TestDormitoryUseCase_DeleteDormitory(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			tt.setupMocks(dormRepo)
 
-			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo)
+			auditLogger := &noopAuditLogger{}
+			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
 			err := dormUseCase.DeleteDormitory(context.Background(), tt.dormitoryID)
 
 			if tt.expectedError != nil {
@@ -256,7 +260,8 @@ func TestDormitoryUseCase_ListDormitories(t *testing.T) {
 			userRepo := new(mocks.MockUserRepository)
 			tt.setupMocks(dormRepo)
 
-			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo)
+			auditLogger := &noopAuditLogger{}
+			dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
 			resp, err := dormUseCase.ListDormitories(context.Background(), tt.page, tt.pageSize)
 
 			if tt.expectedError != nil {

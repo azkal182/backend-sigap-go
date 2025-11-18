@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
+	appService "github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
 	"github.com/your-org/go-backend-starter/internal/domain/repository"
@@ -15,16 +16,19 @@ import (
 type DormitoryUseCase struct {
 	dormitoryRepo repository.DormitoryRepository
 	userRepo      repository.UserRepository
+	auditLogger   appService.AuditLogger
 }
 
 // NewDormitoryUseCase creates a new dormitory use case
 func NewDormitoryUseCase(
 	dormitoryRepo repository.DormitoryRepository,
 	userRepo repository.UserRepository,
+	auditLogger appService.AuditLogger,
 ) *DormitoryUseCase {
 	return &DormitoryUseCase{
 		dormitoryRepo: dormitoryRepo,
 		userRepo:      userRepo,
+		auditLogger:   auditLogger,
 	}
 }
 
@@ -42,6 +46,12 @@ func (uc *DormitoryUseCase) CreateDormitory(ctx context.Context, req dto.CreateD
 	if err := uc.dormitoryRepo.Create(ctx, dormitory); err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "dormitory", "dorm:create", dormitory.ID.String(), map[string]string{
+		"name":        dormitory.Name,
+		"description": dormitory.Description,
+	})
 
 	return uc.toDormitoryResponse(dormitory), nil
 }
@@ -79,17 +89,33 @@ func (uc *DormitoryUseCase) UpdateDormitory(ctx context.Context, id uuid.UUID, r
 		return nil, domainErrors.ErrInternalServer
 	}
 
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "dormitory", "dorm:update", dormitory.ID.String(), map[string]string{
+		"name":        dormitory.Name,
+		"description": dormitory.Description,
+	})
+
 	return uc.toDormitoryResponse(dormitory), nil
 }
 
 // DeleteDormitory deletes a dormitory (soft delete)
 func (uc *DormitoryUseCase) DeleteDormitory(ctx context.Context, id uuid.UUID) error {
-	_, err := uc.dormitoryRepo.GetByID(ctx, id)
+	dormitory, err := uc.dormitoryRepo.GetByID(ctx, id)
 	if err != nil {
 		return domainErrors.ErrDormitoryNotFound
 	}
 
-	return uc.dormitoryRepo.Delete(ctx, id)
+	if err := uc.dormitoryRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "dormitory", "dorm:delete", id.String(), map[string]string{
+		"name":        dormitory.Name,
+		"description": dormitory.Description,
+	})
+
+	return nil
 }
 
 // ListDormitories retrieves a paginated list of dormitories

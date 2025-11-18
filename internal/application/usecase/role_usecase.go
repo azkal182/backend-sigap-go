@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
+	appService "github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
 	"github.com/your-org/go-backend-starter/internal/domain/repository"
@@ -16,16 +17,19 @@ import (
 type RoleUseCase struct {
 	roleRepo       repository.RoleRepository
 	permissionRepo repository.PermissionRepository
+	auditLogger    appService.AuditLogger
 }
 
 // NewRoleUseCase creates a new role use case
 func NewRoleUseCase(
 	roleRepo repository.RoleRepository,
 	permissionRepo repository.PermissionRepository,
+	auditLogger appService.AuditLogger,
 ) *RoleUseCase {
 	return &RoleUseCase{
 		roleRepo:       roleRepo,
 		permissionRepo: permissionRepo,
+		auditLogger:    auditLogger,
 	}
 }
 
@@ -75,6 +79,12 @@ func (uc *RoleUseCase) CreateRole(ctx context.Context, req dto.CreateRoleRequest
 	if err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "role", "role:create", role.ID.String(), map[string]string{
+		"name": role.Name,
+		"slug": role.Slug,
+	})
 
 	return uc.toRoleResponse(roleWithPerms), nil
 }
@@ -126,6 +136,12 @@ func (uc *RoleUseCase) UpdateRole(ctx context.Context, id uuid.UUID, req dto.Upd
 		return nil, domainErrors.ErrInternalServer
 	}
 
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "role", "role:update", role.ID.String(), map[string]string{
+		"name": role.Name,
+		"slug": role.Slug,
+	})
+
 	return uc.toRoleResponse(roleWithPerms), nil
 }
 
@@ -143,7 +159,17 @@ func (uc *RoleUseCase) DeleteRole(ctx context.Context, id uuid.UUID) error {
 	}
 
 	// Delete role
-	return uc.roleRepo.Delete(ctx, id)
+	if err := uc.roleRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	// Audit log (best-effort)
+	_ = uc.auditLogger.Log(ctx, "role", "role:delete", id.String(), map[string]string{
+		"name": role.Name,
+		"slug": role.Slug,
+	})
+
+	return nil
 }
 
 // ListRoles retrieves a paginated list of roles

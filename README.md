@@ -258,6 +258,8 @@ Server akan berjalan di `http://localhost:8080`
 ### Permissions (Protected)
 - `GET /api/permissions` - List permissions (with pagination, requires `role:read` permission)
 
+### Audit Logs (Protected)
+- `GET /api/audit-logs` - List audit logs (with pagination and filters, requires `audit:read` permission)
 ### Dormitories (Protected)
 - `GET /api/dormitories` - List dormitories (with pagination)
 - `GET /api/dormitories/:id` - Get dormitory by ID (requires dormitory access)
@@ -325,8 +327,54 @@ curl -X GET http://localhost:8080/api/me \
     "name": "John Doe",
     "is_active": true,
     "roles": ["user"],
+    "permissions": [
+      "dorm:read"
+    ],
+    "dormitories": [],
     "created_at": "2025-11-18T06:04:28+07:00",
     "updated_at": "2025-11-18T06:04:28+07:00"
+  }
+}
+```
+
+### 6. Audit Logs
+
+#### List Audit Logs
+
+```bash
+curl -X GET 'http://localhost:8080/api/audit-logs?page=1&page_size=10' \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Audit logs retrieved successfully",
+  "data": {
+    "logs": [
+      {
+        "id": "uuid",
+        "actor_id": "uuid",
+        "actor_email": "admin@example.com",
+        "actor_roles": ["admin"],
+        "action": "user:create",
+        "resource": "user",
+        "target_id": "uuid",
+        "request_path": "/api/users",
+        "request_method": "POST",
+        "status_code": 201,
+        "ip_address": "127.0.0.1",
+        "user_agent": "curl/7.79.1",
+        "metadata": "{\"email\":\"user@example.com\",\"name\":\"John Doe\"}",
+        "created_at": "2025-11-18T06:10:00+07:00"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
   }
 }
 ```

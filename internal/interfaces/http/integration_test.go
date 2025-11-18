@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
+	appService "github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
 	"github.com/your-org/go-backend-starter/internal/infrastructure/database"
@@ -118,6 +119,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	roleRepo := infraRepo.NewRoleRepository() // These will use database.DB
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
+	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
 	regencyRepo := infraRepo.NewRegencyRepository()
 	districtRepo := infraRepo.NewDistrictRepository()
@@ -125,14 +127,16 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 
 	// Initialize services
 	tokenService := infraService.NewJWTService()
+	auditLogger := appService.NewAuditLogger(auditLogRepo)
 
 	// Initialize use cases
 	authUseCase := usecase.NewAuthUseCase(userRepo, tokenService)
-	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo)
-	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
-	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
+	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
+	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
+	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
+	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -141,12 +145,13 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
+	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, authMiddleware)
 
 	cleanup := func() {
 		database.DB = originalDB // Restore original DB

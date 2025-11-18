@@ -49,6 +49,8 @@ func main() {
 		{ID: uuid.New(), Name: "role:create", Slug: "role-create", Resource: "role", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "role:update", Slug: "role-update", Resource: "role", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "role:delete", Slug: "role-delete", Resource: "role", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Audit permissions
+		{ID: uuid.New(), Name: "audit:read", Slug: "audit-read", Resource: "audit_log", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
