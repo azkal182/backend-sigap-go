@@ -36,6 +36,10 @@ func main() {
 	roleRepo := infraRepo.NewRoleRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
+	provinceRepo := infraRepo.NewProvinceRepository()
+	regencyRepo := infraRepo.NewRegencyRepository()
+	districtRepo := infraRepo.NewDistrictRepository()
+	villageRepo := infraRepo.NewVillageRepository()
 
 	// Initialize services
 	tokenService := infraService.NewJWTService()
@@ -45,18 +49,20 @@ func main() {
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
+	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
 	userHandler := handler.NewUserHandler(userUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
+	locationHandler := handler.NewLocationHandler(locationUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, authMiddleware)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

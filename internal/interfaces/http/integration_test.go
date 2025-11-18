@@ -118,6 +118,10 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	roleRepo := infraRepo.NewRoleRepository() // These will use database.DB
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
+	provinceRepo := infraRepo.NewProvinceRepository()
+	regencyRepo := infraRepo.NewRegencyRepository()
+	districtRepo := infraRepo.NewDistrictRepository()
+	villageRepo := infraRepo.NewVillageRepository()
 
 	// Initialize services
 	tokenService := infraService.NewJWTService()
@@ -127,18 +131,20 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
+	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
 	userHandler := handler.NewUserHandler(userUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
+	locationHandler := handler.NewLocationHandler(locationUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, authMiddleware)
 
 	cleanup := func() {
 		database.DB = originalDB // Restore original DB

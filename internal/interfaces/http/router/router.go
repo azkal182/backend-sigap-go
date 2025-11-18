@@ -13,6 +13,7 @@ func SetupRouter(
 	userHandler *handler.UserHandler,
 	dormitoryHandler *handler.DormitoryHandler,
 	roleHandler *handler.RoleHandler,
+	locationHandler *handler.LocationHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -32,6 +33,16 @@ func SetupRouter(
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
 		}
+
+		// Public location routes (no auth)
+		api.GET("/provinces", locationHandler.ListProvinces)
+		api.GET("/provinces/:id", locationHandler.GetProvince)
+		api.GET("/regencies", locationHandler.ListRegencies)
+		api.GET("/regencies/:id", locationHandler.GetRegency)
+		api.GET("/districts", locationHandler.ListDistricts)
+		api.GET("/districts/:id", locationHandler.GetDistrict)
+		api.GET("/villages", locationHandler.ListVillages)
+		api.GET("/villages/:id", locationHandler.GetVillage)
 
 		// Protected routes
 		protected := api.Group("")

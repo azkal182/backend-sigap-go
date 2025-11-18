@@ -160,4 +160,80 @@ func init() {
 			return nil
 		},
 	)
+
+	// Migration 004: Create location tables (provinces, regencies, districts, villages)
+	RegisterMigration(
+		"004_create_location_tables",
+		"Create provinces, regencies, districts, and villages tables",
+		func(db *gorm.DB) error {
+			// Use AutoMigrate for simplicity; IDs are ints and relations use FK columns
+			return db.AutoMigrate(
+				&entity.Province{},
+				&entity.Regency{},
+				&entity.District{},
+				&entity.Village{},
+			)
+		},
+		func(db *gorm.DB) error {
+			// Rollback: drop tables in reverse dependency order
+			if err := db.Migrator().DropTable(&entity.Village{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.District{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.Regency{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.Province{}); err != nil {
+				return err
+			}
+			return nil
+		},
+	)
+
+	// Migration 005: Add indexes for location tables to optimize search
+	RegisterMigration(
+		"005_add_location_indexes",
+		"Add indexes on location tables for name search and parent filters",
+		func(db *gorm.DB) error {
+			// Provinces: index on name
+			if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_provinces_name ON provinces (name)").Error; err != nil {
+				return err
+			}
+
+			// Regencies: index on (province_id, name)
+			if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_regencies_province_id_name ON regencies (province_id, name)").Error; err != nil {
+				return err
+			}
+
+			// Districts: index on (regency_id, name)
+			if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_districts_regency_id_name ON districts (regency_id, name)").Error; err != nil {
+				return err
+			}
+
+			// Villages: index on (district_id, name)
+			if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_villages_district_id_name ON villages (district_id, name)").Error; err != nil {
+				return err
+			}
+
+			return nil
+		},
+		func(db *gorm.DB) error {
+			// Drop indexes if they exist
+			if err := db.Exec("DROP INDEX IF EXISTS idx_villages_district_id_name").Error; err != nil {
+				return err
+			}
+			if err := db.Exec("DROP INDEX IF EXISTS idx_districts_regency_id_name").Error; err != nil {
+				return err
+			}
+			if err := db.Exec("DROP INDEX IF EXISTS idx_regencies_province_id_name").Error; err != nil {
+				return err
+			}
+			if err := db.Exec("DROP INDEX IF EXISTS idx_provinces_name").Error; err != nil {
+				return err
+			}
+			return nil
+		},
+	)
 }
