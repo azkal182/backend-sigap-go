@@ -212,8 +212,8 @@ Ini akan membuat:
   - `admin` (protected) - memiliki semua permissions
   - `super_admin` (protected) - memiliki semua permissions
 - **Users**:
-  - Admin: `admin@example.com` / `admin123`
-  - Super Admin: `superadmin@example.com` / `superadmin123`
+  - Admin: `admin` / `admin123`
+  - Super Admin: `superadmin` / `superadmin123`
 - **Sample dormitories**
 
 ### 7. Run Application
@@ -282,7 +282,7 @@ Bagian ini memberikan contoh request dan response sukses (1 row data) untuk endp
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "username": "user",
     "password": "password123",
     "name": "John Doe"
   }'
@@ -300,7 +300,7 @@ curl -X POST http://localhost:8080/api/auth/register \
     "expires_at": "2024-01-01T12:15:00Z",
     "user": {
       "id": "uuid",
-      "email": "user@example.com",
+      "username": "user",
       "name": "John Doe",
       "roles": ["user"]
     }
@@ -323,7 +323,7 @@ curl -X GET http://localhost:8080/api/me \
   "message": "Current user retrieved successfully",
   "data": {
     "id": "uuid",
-    "email": "user@example.com",
+    "username": "user",
     "name": "John Doe",
     "is_active": true,
     "roles": ["user"],
@@ -357,7 +357,7 @@ curl -X GET 'http://localhost:8080/api/audit-logs?page=1&page_size=10' \
       {
         "id": "uuid",
         "actor_id": "uuid",
-        "actor_email": "admin@example.com",
+        "actor_username": "admin",
         "actor_roles": ["admin"],
         "action": "user:create",
         "resource": "user",
@@ -367,7 +367,7 @@ curl -X GET 'http://localhost:8080/api/audit-logs?page=1&page_size=10' \
         "status_code": 201,
         "ip_address": "127.0.0.1",
         "user_agent": "curl/7.79.1",
-        "metadata": "{\"email\":\"user@example.com\",\"name\":\"John Doe\"}",
+        "metadata": "{\"username\":\"user\",\"name\":\"John Doe\"}",
         "created_at": "2025-11-18T06:10:00+07:00"
       }
     ],
@@ -418,7 +418,7 @@ curl -X GET 'http://localhost:8080/api/permissions?page=1&page_size=10' \
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@example.com",
+    "username": "admin",
     "password": "admin123"
   }'
 ```
@@ -446,7 +446,7 @@ curl -X GET 'http://localhost:8080/api/users?page=1&page_size=10' \
     "users": [
       {
         "id": "uuid",
-        "email": "admin@example.com",
+        "username": "admin",
         "name": "Admin User",
         "is_active": true,
         "roles": ["admin"]
@@ -699,7 +699,7 @@ Format response error mengikuti struktur berikut:
 - `401 Unauthorized` - `ErrorUnauthorized()` - Tidak terautentikasi
 - `403 Forbidden` - `ErrorForbidden()` - Tidak memiliki izin
 - `404 Not Found` - `ErrorNotFound()` - Resource tidak ditemukan
-- `409 Conflict` - `ErrorConflict()` - Konflik data (misal: email sudah terdaftar)
+- `409 Conflict` - `ErrorConflict()` - Konflik data (misal: username sudah terdaftar)
 - `500 Internal Server Error` - `ErrorInternalServer()` - Error server
 
 ### Response Helper Functions
@@ -728,7 +728,7 @@ response.ErrorInternalServer(c, "message", "errorDetail")
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "username": "user",
     "password": "password123",
     "name": "John Doe"
   }'
@@ -739,7 +739,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@example.com",
+    "username": "admin",
     "password": "admin123"
   }'
 ```
@@ -755,7 +755,7 @@ Response:
     "expires_at": "2024-01-01T12:15:00Z",
     "user": {
       "id": "uuid",
-      "email": "admin@example.com",
+      "username": "admin",
       "name": "Admin User",
       "roles": ["admin"]
     }

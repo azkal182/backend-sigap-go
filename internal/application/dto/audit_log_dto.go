@@ -4,7 +4,7 @@ package dto
 type AuditLogResponse struct {
 	ID            string   `json:"id"`
 	ActorID       string   `json:"actor_id,omitempty"`
-	ActorEmail    string   `json:"actor_email,omitempty"`
+	ActorUsername string   `json:"username,omitempty"`
 	ActorRoles    []string `json:"actor_roles,omitempty"`
 	Action        string   `json:"action"`
 	Resource      string   `json:"resource"`

@@ -71,7 +71,7 @@ func (h *UserHandler) Me(c *gin.Context) {
 
 	resp := dto.UserResponse{
 		ID:          userEntity.ID.String(),
-		Email:       userEntity.Email,
+		Username:    userEntity.Username,
 		Name:        userEntity.Name,
 		IsActive:    userEntity.IsActive,
 		Roles:       roles,
@@ -185,7 +185,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		case domainErrors.ErrUserNotFound:
 			response.ErrorNotFound(c, "User not found")
 		case domainErrors.ErrUserAlreadyExists:
-			response.ErrorConflict(c, "Email already taken")
+			response.ErrorConflict(c, "Username already taken")
 		default:
 			response.ErrorInternalServer(c, "Failed to update user", err.Error())
 		}

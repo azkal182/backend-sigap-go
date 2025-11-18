@@ -20,13 +20,13 @@ func NewAuditLogUseCase(repo repository.AuditLogRepository) *AuditLogUseCase {
 }
 
 // ListAuditLogs retrieves a paginated list of audit logs
-func (uc *AuditLogUseCase) ListAuditLogs(ctx context.Context, page, pageSize int, resource, action, actorEmail string) (*dto.ListAuditLogsResponse, error) {
+func (uc *AuditLogUseCase) ListAuditLogs(ctx context.Context, page, pageSize int, resource, action, actorUsername string) (*dto.ListAuditLogsResponse, error) {
 	filter := repository.AuditLogFilter{
-		Page:       page,
-		PageSize:   pageSize,
-		Resource:   resource,
-		Action:     action,
-		ActorEmail: actorEmail,
+		Page:          page,
+		PageSize:      pageSize,
+		Resource:      resource,
+		Action:        action,
+		ActorUsername: actorUsername,
 	}
 
 	logs, total, err := uc.repo.List(ctx, filter)
@@ -49,7 +49,7 @@ func (uc *AuditLogUseCase) ListAuditLogs(ctx context.Context, page, pageSize int
 		items = append(items, dto.AuditLogResponse{
 			ID:            l.ID.String(),
 			ActorID:       actorIDStr,
-			ActorEmail:    l.ActorEmail,
+			ActorUsername: l.ActorUsername,
 			ActorRoles:    roles,
 			Action:        l.Action,
 			Resource:      l.Resource,

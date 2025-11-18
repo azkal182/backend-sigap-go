@@ -196,12 +196,12 @@ func main() {
 	}
 
 	// Create admin user (only if doesn't exist)
-	existingAdminUser, _ := userRepo.GetByEmail(ctx, "admin@example.com")
+	existingAdminUser, _ := userRepo.GetByUsername(ctx, "admin")
 	if existingAdminUser == nil && adminRoleEntity != nil {
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		adminUser := &entity.User{
 			ID:        uuid.New(),
-			Email:     "admin@example.com",
+			Username:  "admin",
 			Password:  string(hashedPassword),
 			Name:      "Admin User",
 			IsActive:  true,
@@ -214,19 +214,19 @@ func main() {
 		if err := userRepo.Create(ctx, adminUser); err != nil {
 			log.Printf("Failed to create admin user: %v", err)
 		} else {
-			log.Println("Created admin user: admin@example.com / admin123")
+			log.Println("Created admin user: admin / admin123")
 		}
 	} else {
 		log.Println("Admin user already exists, skipping...")
 	}
 
 	// Create super admin user (only if doesn't exist)
-	existingSuperAdminUser, _ := userRepo.GetByEmail(ctx, "superadmin@example.com")
+	existingSuperAdminUser, _ := userRepo.GetByUsername(ctx, "superadmin")
 	if existingSuperAdminUser == nil && superAdminRoleEntity != nil {
 		hashedPasswordSuper, _ := bcrypt.GenerateFromPassword([]byte("superadmin123"), bcrypt.DefaultCost)
 		superAdminUser := &entity.User{
 			ID:        uuid.New(),
-			Email:     "superadmin@example.com",
+			Username:  "superadmin",
 			Password:  string(hashedPasswordSuper),
 			Name:      "Super Admin User",
 			IsActive:  true,
@@ -239,7 +239,7 @@ func main() {
 		if err := userRepo.Create(ctx, superAdminUser); err != nil {
 			log.Printf("Failed to create super admin user: %v", err)
 		} else {
-			log.Println("Created super admin user: superadmin@example.com / superadmin123")
+			log.Println("Created super admin user: superadmin / superadmin123")
 		}
 	} else {
 		log.Println("Super admin user already exists, skipping...")

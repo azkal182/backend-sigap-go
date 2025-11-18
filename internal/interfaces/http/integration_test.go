@@ -44,9 +44,9 @@ func (r *testUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity
 	return &user, nil
 }
 
-func (r *testUserRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *testUserRepository) GetByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var user entity.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Where("username = ?", username).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func TestAuthIntegration_RegisterAndLogin(t *testing.T) {
 
 	// Test Register
 	registerReq := dto.RegisterRequest{
-		Email:    "integration@example.com",
+		Username: "integration",
 		Password: "password123",
 		Name:     "Integration Test User",
 	}
@@ -194,7 +194,7 @@ func TestAuthIntegration_RegisterAndLogin(t *testing.T) {
 
 	// Test Login
 	loginReq := dto.LoginRequest{
-		Email:    "integration@example.com",
+		Username: "integration",
 		Password: "password123",
 	}
 
@@ -230,7 +230,7 @@ func TestAuthIntegration_InvalidCredentials(t *testing.T) {
 
 	// Register user first
 	registerReq := dto.RegisterRequest{
-		Email:    "test@example.com",
+		Username: "test",
 		Password: "password123",
 		Name:     "Test User",
 	}
@@ -245,7 +245,7 @@ func TestAuthIntegration_InvalidCredentials(t *testing.T) {
 
 	// Try login with wrong password
 	loginReq := dto.LoginRequest{
-		Email:    "test@example.com",
+		Username: "test",
 		Password: "wrongpassword",
 	}
 

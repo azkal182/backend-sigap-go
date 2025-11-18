@@ -43,8 +43,8 @@ func (r *auditLogRepository) List(ctx context.Context, filter repository.AuditLo
 	if filter.Action != "" {
 		query = query.Where("action = ?", filter.Action)
 	}
-	if filter.ActorEmail != "" {
-		query = query.Where("actor_email = ?", filter.ActorEmail)
+	if filter.ActorUsername != "" {
+		query = query.Where("actor_username = ?", filter.ActorUsername)
 	}
 
 	var total int64

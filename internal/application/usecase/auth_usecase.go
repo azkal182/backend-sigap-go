@@ -14,7 +14,7 @@ import (
 
 // AuthUseCase handles authentication use cases
 type AuthUseCase struct {
-	userRepo    repository.UserRepository
+	userRepo     repository.UserRepository
 	tokenService service.TokenService
 }
 
@@ -24,7 +24,7 @@ func NewAuthUseCase(
 	tokenService service.TokenService,
 ) *AuthUseCase {
 	return &AuthUseCase{
-		userRepo:    userRepo,
+		userRepo:     userRepo,
 		tokenService: tokenService,
 	}
 }
@@ -32,7 +32,7 @@ func NewAuthUseCase(
 // Register handles user registration
 func (uc *AuthUseCase) Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error) {
 	// Check if user already exists
-	existingUser, _ := uc.userRepo.GetByEmail(ctx, req.Email)
+	existingUser, _ := uc.userRepo.GetByUsername(ctx, req.Username)
 	if existingUser != nil {
 		return nil, domainErrors.ErrUserAlreadyExists
 	}
@@ -40,7 +40,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, req dto.RegisterRequest) (*
 	// Create new user
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     req.Email,
+		Username:  req.Username,
 		Password:  req.Password,
 		Name:      req.Name,
 		IsActive:  true,
@@ -70,7 +70,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, req dto.RegisterRequest) (*
 		roles = append(roles, role.Name)
 	}
 
-	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Email, roles)
+	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Username, roles)
 	if err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
@@ -85,18 +85,18 @@ func (uc *AuthUseCase) Register(ctx context.Context, req dto.RegisterRequest) (*
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(15 * time.Minute).Format(time.RFC3339),
 		User: dto.UserDTO{
-			ID:    user.ID.String(),
-			Email: user.Email,
-			Name:  user.Name,
-			Roles: roles,
+			ID:       user.ID.String(),
+			Username: user.Username,
+			Name:     user.Name,
+			Roles:    roles,
 		},
 	}, nil
 }
 
 // Login handles user login
 func (uc *AuthUseCase) Login(ctx context.Context, req dto.LoginRequest) (*dto.AuthResponse, error) {
-	// Get user by email
-	user, err := uc.userRepo.GetByEmail(ctx, req.Email)
+	// Get user by Username
+	user, err := uc.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
 		return nil, domainErrors.ErrInvalidCredentials
 	}
@@ -128,7 +128,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, req dto.LoginRequest) (*dto.Au
 		roles = append(roles, role.Name)
 	}
 
-	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Email, roles)
+	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Username, roles)
 	if err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
@@ -143,10 +143,10 @@ func (uc *AuthUseCase) Login(ctx context.Context, req dto.LoginRequest) (*dto.Au
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(15 * time.Minute).Format(time.RFC3339),
 		User: dto.UserDTO{
-			ID:    user.ID.String(),
-			Email: user.Email,
-			Name:  user.Name,
-			Roles: roles,
+			ID:       user.ID.String(),
+			Username: user.Username,
+			Name:     user.Name,
+			Roles:    roles,
 		},
 	}, nil
 }
@@ -176,7 +176,7 @@ func (uc *AuthUseCase) RefreshToken(ctx context.Context, req dto.RefreshTokenReq
 		roles = append(roles, role.Name)
 	}
 
-	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Email, roles)
+	accessToken, err := uc.tokenService.GenerateAccessToken(user.ID, user.Username, roles)
 	if err != nil {
 		return nil, domainErrors.ErrInternalServer
 	}
@@ -192,10 +192,10 @@ func (uc *AuthUseCase) RefreshToken(ctx context.Context, req dto.RefreshTokenReq
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(15 * time.Minute).Format(time.RFC3339),
 		User: dto.UserDTO{
-			ID:    user.ID.String(),
-			Email: user.Email,
-			Name:  user.Name,
-			Roles: roles,
+			ID:       user.ID.String(),
+			Username: user.Username,
+			Name:     user.Name,
+			Roles:    roles,
 		},
 	}, nil
 }

@@ -29,12 +29,12 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 		{
 			name: "success - create user without roles",
 			req: dto.CreateUserRequest{
-				Email:    "newuser@example.com",
+				Username: "newuser",
 				Password: "password123",
 				Name:     "New User",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
-				userRepo.On("GetByEmail", mock.Anything, "newuser@example.com").Return(nil, domainErrors.ErrUserNotFound)
+				userRepo.On("GetByUsername", mock.Anything, "newuser").Return(nil, domainErrors.ErrUserNotFound)
 				// Default role lookup ("user")
 				roleRepo.On("GetBySlug", mock.Anything, "user").Return(&entity.Role{
 					ID:   uuid.New(),
@@ -43,7 +43,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 				userRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("GetWithRoles", mock.Anything, mock.Anything).Return(&entity.User{
 					ID:       uuid.New(),
-					Email:    "newuser@example.com",
+					Username: "newuser",
 					Name:     "New User",
 					IsActive: true,
 					Roles:    []entity.Role{},
@@ -54,7 +54,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 		{
 			name: "success - create user with roles",
 			req: dto.CreateUserRequest{
-				Email:    "newuser@example.com",
+				Username: "newuser",
 				Password: "password123",
 				Name:     "New User",
 				RoleIDs:  []string{uuid.New().String()},
@@ -64,7 +64,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 				// Inject roleID into request
 				// (we rely on CreateUser reading req.RoleIDs and then calling GetByID with this ID)
 				// Note: we can't modify tt.req here easily, so we just relax the ID matching below.
-				userRepo.On("GetByEmail", mock.Anything, "newuser@example.com").Return(nil, domainErrors.ErrUserNotFound)
+				userRepo.On("GetByUsername", mock.Anything, "newuser").Return(nil, domainErrors.ErrUserNotFound)
 				roleRepo.On("GetByID", mock.Anything, mock.Anything).Return(&entity.Role{
 					ID:   roleID,
 					Name: "user",
@@ -72,7 +72,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 				userRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("GetWithRoles", mock.Anything, mock.Anything).Return(&entity.User{
 					ID:       uuid.New(),
-					Email:    "newuser@example.com",
+					Username: "newuser",
 					Name:     "New User",
 					IsActive: true,
 					Roles: []entity.Role{
@@ -85,14 +85,14 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 		{
 			name: "failure - user already exists",
 			req: dto.CreateUserRequest{
-				Email:    "existing@example.com",
+				Username: "existing",
 				Password: "password123",
 				Name:     "Existing User",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
-				userRepo.On("GetByEmail", mock.Anything, "existing@example.com").Return(&entity.User{
-					ID:    uuid.New(),
-					Email: "existing@example.com",
+				userRepo.On("GetByUsername", mock.Anything, "existing").Return(&entity.User{
+					ID:       uuid.New(),
+					Username: "existing",
 				}, nil)
 			},
 			expectedError: domainErrors.ErrUserAlreadyExists,
@@ -116,7 +116,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
-				assert.Equal(t, tt.req.Email, resp.Email)
+				assert.Equal(t, tt.req.Username, resp.Username)
 				assert.Equal(t, tt.req.Name, resp.Name)
 			}
 
@@ -141,7 +141,7 @@ func TestUserUseCase_GetUserByID(t *testing.T) {
 			setupMocks: func(userRepo *mocks.MockUserRepository) {
 				userRepo.On("GetWithRoles", mock.Anything, userID).Return(&entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Name:     "Test User",
 					IsActive: true,
 					Roles:    []entity.Role{{ID: uuid.New(), Name: "user"}},
@@ -202,14 +202,14 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
 				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Name:     "Old Name",
 					IsActive: true,
 				}, nil)
 				userRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("GetWithRoles", mock.Anything, userID).Return(&entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Name:     "Updated Name",
 					IsActive: true,
 					Roles:    []entity.Role{},
@@ -229,20 +229,20 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			expectedError: domainErrors.ErrUserNotFound,
 		},
 		{
-			name:   "failure - email already taken",
+			name:   "failure - Username already taken",
 			userID: userID,
 			req: dto.UpdateUserRequest{
-				Email: "taken@example.com",
+				Username: "taken",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
 				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{
-					ID:    userID,
-					Email: "user@example.com",
+					ID:       userID,
+					Username: "user",
 				}, nil)
 				otherUserID := uuid.New()
-				userRepo.On("GetByEmail", mock.Anything, "taken@example.com").Return(&entity.User{
-					ID:    otherUserID,
-					Email: "taken@example.com",
+				userRepo.On("GetByUsername", mock.Anything, "taken").Return(&entity.User{
+					ID:       otherUserID,
+					Username: "taken",
 				}, nil)
 			},
 			expectedError: domainErrors.ErrUserAlreadyExists,
@@ -339,8 +339,8 @@ func TestUserUseCase_ListUsers(t *testing.T) {
 			pageSize: 10,
 			setupMocks: func(userRepo *mocks.MockUserRepository) {
 				users := []*entity.User{
-					{ID: uuid.New(), Email: "user1@example.com", Name: "User 1"},
-					{ID: uuid.New(), Email: "user2@example.com", Name: "User 2"},
+					{ID: uuid.New(), Username: "user1", Name: "User 1"},
+					{ID: uuid.New(), Username: "user2", Name: "User 2"},
 				}
 				userRepo.On("List", mock.Anything, 10, 0).Return(users, int64(2), nil)
 				userRepo.On("GetWithRoles", mock.Anything, mock.Anything).Return(&entity.User{

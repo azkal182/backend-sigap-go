@@ -31,7 +31,7 @@ func (r *inMemoryAuditLogRepo) List(ctx context.Context, filter repository.Audit
 		if filter.Action != "" && l.Action != filter.Action {
 			continue
 		}
-		if filter.ActorEmail != "" && l.ActorEmail != filter.ActorEmail {
+		if filter.ActorUsername != "" && l.ActorUsername != filter.ActorUsername {
 			continue
 		}
 		filtered = append(filtered, l)
@@ -64,29 +64,29 @@ func TestAuditLogUseCase_ListAuditLogs(t *testing.T) {
 	// seed some logs
 	repo.logs = []*entity.AuditLog{
 		{
-			ID:          uuid.New(),
-			ActorEmail:  "admin@example.com",
-			ActorRoles:  "[\"admin\"]",
-			Action:      "user:create",
-			Resource:    "user",
-			TargetID:    uuid.New().String(),
-			RequestPath: "/api/users",
-			CreatedAt:   now,
+			ID:            uuid.New(),
+			ActorUsername: "admin",
+			ActorRoles:    "[\"admin\"]",
+			Action:        "user:create",
+			Resource:      "user",
+			TargetID:      uuid.New().String(),
+			RequestPath:   "/api/users",
+			CreatedAt:     now,
 		},
 		{
-			ID:          uuid.New(),
-			ActorEmail:  "admin@example.com",
-			ActorRoles:  "[\"admin\"]",
-			Action:      "role:create",
-			Resource:    "role",
-			TargetID:    uuid.New().String(),
-			RequestPath: "/api/roles",
-			CreatedAt:   now,
+			ID:            uuid.New(),
+			ActorUsername: "admin",
+			ActorRoles:    "[\"admin\"]",
+			Action:        "role:create",
+			Resource:      "role",
+			TargetID:      uuid.New().String(),
+			RequestPath:   "/api/roles",
+			CreatedAt:     now,
 		},
 	}
 
 	ctx := context.Background()
-	resp, err := uc.ListAuditLogs(ctx, 1, 10, "user", "user:create", "admin@example.com")
+	resp, err := uc.ListAuditLogs(ctx, 1, 10, "user", "user:create", "admin")
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, int64(1), resp.Total)
@@ -95,5 +95,5 @@ func TestAuditLogUseCase_ListAuditLogs(t *testing.T) {
 	logResp := resp.Logs[0]
 	assert.Equal(t, "user", logResp.Resource)
 	assert.Equal(t, "user:create", logResp.Action)
-	assert.Equal(t, "admin@example.com", logResp.ActorEmail)
+	assert.Equal(t, "admin", logResp.ActorUsername)
 }

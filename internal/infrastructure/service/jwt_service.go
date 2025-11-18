@@ -12,9 +12,9 @@ import (
 )
 
 type jwtService struct {
-	secretKey            []byte
-	accessTokenExpiry   time.Duration
-	refreshTokenExpiry  time.Duration
+	secretKey          []byte
+	accessTokenExpiry  time.Duration
+	refreshTokenExpiry time.Duration
 }
 
 // NewJWTService creates a new JWT service
@@ -39,21 +39,21 @@ func NewJWTService() service.TokenService {
 	}
 
 	return &jwtService{
-		secretKey:           []byte(secretKey),
-		accessTokenExpiry:   accessExpiry,
-		refreshTokenExpiry:  refreshExpiry,
+		secretKey:          []byte(secretKey),
+		accessTokenExpiry:  accessExpiry,
+		refreshTokenExpiry: refreshExpiry,
 	}
 }
 
 // GenerateAccessToken generates a new access token
-func (s *jwtService) GenerateAccessToken(userID uuid.UUID, email string, roles []string) (string, error) {
+func (s *jwtService) GenerateAccessToken(userID uuid.UUID, username string, roles []string) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID.String(),
-		"email":   email,
-		"roles":   roles,
-		"type":    "access",
-		"exp":     time.Now().Add(s.accessTokenExpiry).Unix(),
-		"iat":     time.Now().Unix(),
+		"user_id":  userID.String(),
+		"username": username,
+		"roles":    roles,
+		"type":     "access",
+		"exp":      time.Now().Add(s.accessTokenExpiry).Unix(),
+		"iat":      time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -120,9 +120,9 @@ func (s *jwtService) ValidateToken(tokenString string) (*service.TokenClaims, er
 		Exp:    int64(exp),
 	}
 
-	// Extract email and roles for access tokens
-	if email, ok := claims["email"].(string); ok {
-		tokenClaims.Email = email
+	// Extract username and roles for access tokens
+	if username, ok := claims["username"].(string); ok {
+		tokenClaims.Username = username
 	}
 
 	if roles, ok := claims["roles"].([]interface{}); ok {
@@ -156,7 +156,7 @@ func (s *jwtService) RefreshAccessToken(refreshToken string) (string, error) {
 	}
 
 	// Generate new access token
-	// Note: We need email and roles, but refresh token doesn't have them
+	// Note: We need username and roles, but refresh token doesn't have them
 	// So we'll need to fetch from database in the use case
 	return s.GenerateAccessToken(claims.UserID, "", []string{})
 }

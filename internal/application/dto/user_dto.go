@@ -4,7 +4,7 @@ import "github.com/google/uuid"
 
 // CreateUserRequest represents the request to create a user
 type CreateUserRequest struct {
-	Email    string   `json:"email" binding:"required,email"`
+	Username string   `json:"username" binding:"required,alphanumunicode,min=3,max=32"`
 	Password string   `json:"password" binding:"required,min=6"`
 	Name     string   `json:"name" binding:"required"`
 	RoleIDs  []string `json:"role_ids,omitempty"`
@@ -13,7 +13,7 @@ type CreateUserRequest struct {
 // UpdateUserRequest represents the request to update a user
 type UpdateUserRequest struct {
 	Name     string   `json:"name,omitempty"`
-	Email    string   `json:"email,omitempty"`
+	Username string   `json:"username,omitempty"`
 	IsActive *bool    `json:"is_active,omitempty"`
 	RoleIDs  []string `json:"role_ids,omitempty"`
 }
@@ -27,7 +27,7 @@ type UserDormitorySummary struct {
 // UserResponse represents user data in responses
 type UserResponse struct {
 	ID          string                 `json:"id"`
-	Email       string                 `json:"email"`
+	Username    string                 `json:"username"`
 	Name        string                 `json:"name"`
 	IsActive    bool                   `json:"is_active"`
 	Roles       []string               `json:"roles,omitempty"`

@@ -35,7 +35,7 @@ func NewUserUseCase(
 // CreateUser creates a new user
 func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	// Check if user already exists
-	existingUser, _ := uc.userRepo.GetByEmail(ctx, req.Email)
+	existingUser, _ := uc.userRepo.GetByUsername(ctx, req.Username)
 	if existingUser != nil {
 		return nil, domainErrors.ErrUserAlreadyExists
 	}
@@ -43,7 +43,7 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest
 	// Create user
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     req.Email,
+		Username:  req.Username,
 		Password:  req.Password,
 		Name:      req.Name,
 		IsActive:  true,
@@ -92,8 +92,8 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req dto.CreateUserRequest
 
 	// Audit log (best-effort)
 	_ = uc.auditLogger.Log(ctx, "user", "user:create", user.ID.String(), map[string]string{
-		"email": user.Email,
-		"name":  user.Name,
+		"username": user.Username,
+		"name":     user.Name,
 	})
 
 	return uc.toUserResponse(userWithRoles), nil
@@ -121,13 +121,13 @@ func (uc *UserUseCase) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upd
 	if req.Name != "" {
 		user.Name = req.Name
 	}
-	if req.Email != "" {
-		// Check if email is already taken by another user
-		existingUser, _ := uc.userRepo.GetByEmail(ctx, req.Email)
+	if req.Username != "" {
+		// Check if username is already taken by another user
+		existingUser, _ := uc.userRepo.GetByUsername(ctx, req.Username)
 		if existingUser != nil && existingUser.ID != id {
 			return nil, domainErrors.ErrUserAlreadyExists
 		}
-		user.Email = req.Email
+		user.Username = req.Username
 	}
 	if req.IsActive != nil {
 		user.IsActive = *req.IsActive
@@ -165,8 +165,8 @@ func (uc *UserUseCase) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upd
 
 	// Audit log (best-effort)
 	_ = uc.auditLogger.Log(ctx, "user", "user:update", user.ID.String(), map[string]string{
-		"email": user.Email,
-		"name":  user.Name,
+		"username": user.Username,
+		"name":     user.Name,
 	})
 
 	return uc.toUserResponse(userWithRoles), nil
@@ -187,8 +187,8 @@ func (uc *UserUseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 	// Audit log (best-effort)
 	_ = uc.auditLogger.Log(ctx, "user", "user:delete", id.String(), map[string]string{
-		"email": user.Email,
-		"name":  user.Name,
+		"username": user.Username,
+		"name":     user.Name,
 	})
 
 	return nil
@@ -278,7 +278,7 @@ func (uc *UserUseCase) toUserResponse(user *entity.User) *dto.UserResponse {
 
 	return &dto.UserResponse{
 		ID:        user.ID.String(),
-		Email:     user.Email,
+		Username:  user.Username,
 		Name:      user.Name,
 		IsActive:  user.IsActive,
 		Roles:     roles,

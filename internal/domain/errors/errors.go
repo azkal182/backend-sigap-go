@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	// Authentication errors
-	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidCredentials = errors.New("invalid username or password")
 	ErrTokenExpired       = errors.New("token has expired")
 	ErrInvalidToken       = errors.New("invalid token")
 	ErrTokenNotFound      = errors.New("token not found")

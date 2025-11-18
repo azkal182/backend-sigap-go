@@ -8,7 +8,7 @@ import (
 
 // TokenService defines the interface for token operations
 type TokenService interface {
-	GenerateAccessToken(userID uuid.UUID, email string, roles []string) (string, error)
+	GenerateAccessToken(userID uuid.UUID, username string, roles []string) (string, error)
 	GenerateRefreshToken(userID uuid.UUID) (string, error)
 	ValidateToken(tokenString string) (*TokenClaims, error)
 	RefreshAccessToken(refreshToken string) (string, error)
@@ -16,10 +16,10 @@ type TokenService interface {
 
 // TokenClaims represents the claims in a JWT token
 type TokenClaims struct {
-	UserID uuid.UUID
-	Email  string
-	Roles  []string
-	Exp    int64
+	UserID   uuid.UUID
+	Username string
+	Roles    []string
+	Exp      int64
 }
 
 // TokenPair represents a pair of access and refresh tokens

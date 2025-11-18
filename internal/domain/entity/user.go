@@ -9,18 +9,18 @@ import (
 
 // User represents a user entity in the domain
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"` // Never expose password in JSON
-	Name      string    `json:"name"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID  `json:"id"`
+	Username  string     `json:"username" gorm:"uniqueIndex"`
+	Password  string     `json:"-"` // Never expose password in JSON
+	Name      string     `json:"name"`
+	IsActive  bool       `json:"is_active"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 
 	// Relations
-	Roles       []Role       `gorm:"many2many:user_roles;" json:"roles,omitempty"`
-	Dormitories []Dormitory  `gorm:"many2many:user_dormitories;" json:"dormitories,omitempty"`
+	Roles       []Role      `gorm:"many2many:user_roles;" json:"roles,omitempty"`
+	Dormitories []Dormitory `gorm:"many2many:user_dormitories;" json:"dormitories,omitempty"`
 }
 
 // TableName specifies the table name for GORM

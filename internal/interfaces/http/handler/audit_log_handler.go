@@ -24,9 +24,9 @@ func (h *AuditLogHandler) ListAuditLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	resource := c.Query("resource")
 	action := c.Query("action")
-	actorEmail := c.Query("actor_email")
+	actorUsername := c.Query("actor_username")
 
-	resp, err := h.useCase.ListAuditLogs(c.Request.Context(), page, pageSize, resource, action, actorEmail)
+	resp, err := h.useCase.ListAuditLogs(c.Request.Context(), page, pageSize, resource, action, actorUsername)
 	if err != nil {
 		response.ErrorInternalServer(c, "Failed to list audit logs", err.Error())
 		return

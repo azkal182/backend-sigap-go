@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: postgres        # Username database
+      POSTGRES_PASSWORD: postgres # Password database (Ganti ini!)
+      POSTGRES_DB: go_backend_db       # Nama default database
+    ports:
+      - "5433:5432"                 # Mapping port (Host:Container)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persistensi data
+
+volumes:
+  postgres_data:

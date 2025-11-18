@@ -2,6 +2,9 @@
 
 run:
 	go run cmd/main.go
+	
+seed:
+	go run cmd/seed/main.go
 
 build:
 	go build -o bin/server cmd/main.go

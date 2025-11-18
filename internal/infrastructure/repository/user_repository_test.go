@@ -22,7 +22,7 @@ func TestUserRepository_Create(t *testing.T) {
 
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,
@@ -37,7 +37,7 @@ func TestUserRepository_Create(t *testing.T) {
 	var foundUser entity.User
 	err = db.Where("id = ?", user.ID).First(&foundUser).Error
 	require.NoError(t, err)
-	assert.Equal(t, user.Email, foundUser.Email)
+	assert.Equal(t, user.Username, foundUser.Username)
 	assert.Equal(t, user.Name, foundUser.Name)
 }
 
@@ -51,7 +51,7 @@ func TestUserRepository_GetByID(t *testing.T) {
 	// Create a user first
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,
@@ -64,14 +64,14 @@ func TestUserRepository_GetByID(t *testing.T) {
 	foundUser, err := repo.GetByID(ctx, user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, foundUser.ID)
-	assert.Equal(t, user.Email, foundUser.Email)
+	assert.Equal(t, user.Username, foundUser.Username)
 
 	// Test not found
 	_, err = repo.GetByID(ctx, uuid.New())
 	assert.Error(t, err)
 }
 
-func TestUserRepository_GetByEmail(t *testing.T) {
+func TestUserRepository_GetByUsername(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, db)
 
@@ -81,7 +81,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	// Create a user first
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,
@@ -90,14 +90,14 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	}
 	require.NoError(t, db.Create(user).Error)
 
-	// Get user by email
-	foundUser, err := repo.GetByEmail(ctx, "test@example.com")
+	// Get user by username
+	foundUser, err := repo.GetByUsername(ctx, "test")
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, foundUser.ID)
-	assert.Equal(t, user.Email, foundUser.Email)
+	assert.Equal(t, user.Username, foundUser.Username)
 
 	// Test not found
-	_, err = repo.GetByEmail(ctx, "notfound@example.com")
+	_, err = repo.GetByUsername(ctx, "notfound")
 	assert.Error(t, err)
 }
 
@@ -111,7 +111,7 @@ func TestUserRepository_Update(t *testing.T) {
 	// Create a user first
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,
@@ -142,7 +142,7 @@ func TestUserRepository_Delete(t *testing.T) {
 	// Create a user first
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,
@@ -172,7 +172,7 @@ func TestUserRepository_List(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		user := &entity.User{
 			ID:        uuid.New(),
-			Email:     fmt.Sprintf("user%d@example.com", i),
+			Username:  fmt.Sprintf("user%d", i),
 			Password:  "hashedpassword",
 			Name:      fmt.Sprintf("User %d", i),
 			IsActive:  true,
@@ -216,7 +216,7 @@ func TestUserRepository_GetWithRoles(t *testing.T) {
 	// Create user with role
 	user := &entity.User{
 		ID:        uuid.New(),
-		Email:     "test@example.com",
+		Username:  "test",
 		Password:  "hashedpassword",
 		Name:      "Test User",
 		IsActive:  true,

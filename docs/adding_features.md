@@ -264,7 +264,7 @@ Project ini sudah menyediakan:
 
    ```go
    _ = uc.auditLogger.Log(ctx, "user", "user:create", user.ID.String(), map[string]string{
-       "email": user.Email,
+       "username": user.Username,
        "name":  user.Name,
    })
    ```
@@ -305,7 +305,7 @@ Permission `audit:read` sudah ditambahkan di `cmd/seed/main.go` dan diberikan ke
 Route HTTP:
 
 ```text
-GET /api/audit-logs?page=1&page_size=10&resource=user&action=user:create&actor_email=admin@example.com
+GET /api/audit-logs?page=1&page_size=10&resource=user&action=user:create&actor_username=admin
 ```
 
 Route ini menggunakan middleware:

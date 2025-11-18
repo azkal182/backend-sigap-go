@@ -14,9 +14,9 @@ type AuditLogRepository interface {
 
 // AuditLogFilter represents filtering and pagination options for listing audit logs
 type AuditLogFilter struct {
-	Page       int
-	PageSize   int
-	Resource   string
-	Action     string
-	ActorEmail string
+	Page          int
+	PageSize      int
+	Resource      string
+	Action        string
+	ActorUsername string
 }

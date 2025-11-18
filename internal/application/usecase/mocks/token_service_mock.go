@@ -14,8 +14,8 @@ type MockTokenService struct {
 // Ensure MockTokenService implements service.TokenService
 var _ service.TokenService = (*MockTokenService)(nil)
 
-func (m *MockTokenService) GenerateAccessToken(userID uuid.UUID, email string, roles []string) (string, error) {
-	args := m.Called(userID, email, roles)
+func (m *MockTokenService) GenerateAccessToken(userID uuid.UUID, username string, roles []string) (string, error) {
+	args := m.Called(userID, username, roles)
 	return args.String(0), args.Error(1)
 }
 

@@ -18,7 +18,7 @@ func TestUser_HashPassword(t *testing.T) {
 			name: "success - hash password",
 			user: &User{
 				ID:       uuid.New(),
-				Email:    "test@example.com",
+				Username: "test",
 				Password: "password123",
 			},
 			wantErr: false,
@@ -27,7 +27,7 @@ func TestUser_HashPassword(t *testing.T) {
 			name: "success - empty password",
 			user: &User{
 				ID:       uuid.New(),
-				Email:    "test@example.com",
+				Username: "test",
 				Password: "",
 			},
 			wantErr: false,
@@ -53,7 +53,7 @@ func TestUser_HashPassword(t *testing.T) {
 func TestUser_CheckPassword(t *testing.T) {
 	user := &User{
 		ID:       uuid.New(),
-		Email:    "test@example.com",
+		Username: "test",
 		Password: "password123",
 	}
 
@@ -93,8 +93,8 @@ func TestUser_CheckPassword(t *testing.T) {
 
 func TestUser_HasPermission(t *testing.T) {
 	user := &User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
+		ID:       uuid.New(),
+		Username: "test",
 		Roles: []Role{
 			{
 				ID:   uuid.New(),
@@ -151,8 +151,8 @@ func TestUser_HasPermission(t *testing.T) {
 
 func TestUser_HasRole(t *testing.T) {
 	user := &User{
-		ID:    uuid.New(),
-		Email: "test@example.com",
+		ID:       uuid.New(),
+		Username: "test",
 		Roles: []Role{
 			{ID: uuid.New(), Name: "admin"},
 			{ID: uuid.New(), Name: "user"},
@@ -207,8 +207,8 @@ func TestUser_CanAccessDormitory(t *testing.T) {
 		{
 			name: "success - admin can access any dormitory",
 			user: &User{
-				ID:    uuid.New(),
-				Email: "admin@example.com",
+				ID:       uuid.New(),
+				Username: "admin",
 				Roles: []Role{
 					{ID: uuid.New(), Name: "admin"},
 				},
@@ -219,8 +219,8 @@ func TestUser_CanAccessDormitory(t *testing.T) {
 		{
 			name: "success - super_admin can access any dormitory",
 			user: &User{
-				ID:    uuid.New(),
-				Email: "superadmin@example.com",
+				ID:       uuid.New(),
+				Username: "superadmin",
 				Roles: []Role{
 					{ID: uuid.New(), Name: "super_admin"},
 				},
@@ -231,8 +231,8 @@ func TestUser_CanAccessDormitory(t *testing.T) {
 		{
 			name: "success - user can access assigned dormitory",
 			user: &User{
-				ID:    uuid.New(),
-				Email: "user@example.com",
+				ID:       uuid.New(),
+				Username: "user",
 				Roles: []Role{
 					{ID: uuid.New(), Name: "user"},
 				},
@@ -246,8 +246,8 @@ func TestUser_CanAccessDormitory(t *testing.T) {
 		{
 			name: "failure - user cannot access unassigned dormitory",
 			user: &User{
-				ID:    uuid.New(),
-				Email: "user@example.com",
+				ID:       uuid.New(),
+				Username: "user",
 				Roles: []Role{
 					{ID: uuid.New(), Name: "user"},
 				},
@@ -261,8 +261,8 @@ func TestUser_CanAccessDormitory(t *testing.T) {
 		{
 			name: "failure - user with no roles or dormitories",
 			user: &User{
-				ID:    uuid.New(),
-				Email: "user@example.com",
+				ID:       uuid.New(),
+				Username: "user",
 			},
 			dormitoryID:    dormitoryID,
 			expectedResult: false,

@@ -18,7 +18,7 @@ const (
 	CtxKeyIPAddress     = "ip_address"
 	CtxKeyUserAgent     = "user_agent"
 	CtxKeyActorID       = "user_id"
-	CtxKeyActorEmail    = "user_email"
+	CtxKeyActorUsername = "user_username"
 	CtxKeyActorRoles    = "user_roles"
 )
 
@@ -52,7 +52,7 @@ func (l *auditLogger) Log(ctx context.Context, resource, action, targetID string
 			actorIDPtr = &id
 		}
 	}
-	actorEmail, _ := ctx.Value(CtxKeyActorEmail).(string)
+	actorUsername, _ := ctx.Value(CtxKeyActorUsername).(string)
 	actorRolesStr := ""
 	if roles, ok := ctx.Value(CtxKeyActorRoles).([]string); ok {
 		if b, err := json.Marshal(roles); err == nil {
@@ -72,7 +72,7 @@ func (l *auditLogger) Log(ctx context.Context, resource, action, targetID string
 	logEntry := &entity.AuditLog{
 		ID:            uuid.New(),
 		ActorID:       actorIDPtr,
-		ActorEmail:    actorEmail,
+		ActorUsername: actorUsername,
 		ActorRoles:    actorRolesStr,
 		Action:        action,
 		Resource:      resource,

@@ -17,10 +17,10 @@ func TestJWTService_GenerateAccessToken(t *testing.T) {
 
 	service := NewJWTService()
 	userID := uuid.New()
-	email := "test@example.com"
+	username := "test"
 	roles := []string{"admin", "user"}
 
-	token, err := service.GenerateAccessToken(userID, email, roles)
+	token, err := service.GenerateAccessToken(userID, username, roles)
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, token)
@@ -45,11 +45,11 @@ func TestJWTService_ValidateToken(t *testing.T) {
 
 	service := NewJWTService()
 	userID := uuid.New()
-	email := "test@example.com"
+	username := "test"
 	roles := []string{"admin", "user"}
 
 	// Generate token
-	token, err := service.GenerateAccessToken(userID, email, roles)
+	token, err := service.GenerateAccessToken(userID, username, roles)
 	require.NoError(t, err)
 
 	// Validate token
@@ -57,7 +57,7 @@ func TestJWTService_ValidateToken(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, userID, claims.UserID)
-	assert.Equal(t, email, claims.Email)
+	assert.Equal(t, username, claims.Username)
 	assert.Equal(t, roles, claims.Roles)
 	assert.Greater(t, claims.Exp, time.Now().Unix())
 }
@@ -104,11 +104,11 @@ func TestJWTService_ValidateToken_ExpiredToken(t *testing.T) {
 
 	service := NewJWTService()
 	userID := uuid.New()
-	email := "test@example.com"
+	username := "test"
 	roles := []string{"admin"}
 
 	// Generate token
-	token, err := service.GenerateAccessToken(userID, email, roles)
+	token, err := service.GenerateAccessToken(userID, username, roles)
 	require.NoError(t, err)
 
 	// Wait for token to expire
@@ -126,11 +126,11 @@ func TestJWTService_ValidateToken_WrongSecret(t *testing.T) {
 
 	service1 := NewJWTService()
 	userID := uuid.New()
-	email := "test@example.com"
+	username := "test"
 	roles := []string{"admin"}
 
 	// Generate token with service1
-	token, err := service1.GenerateAccessToken(userID, email, roles)
+	token, err := service1.GenerateAccessToken(userID, username, roles)
 	require.NoError(t, err)
 
 	// Try to validate with service2 using different secret
@@ -168,10 +168,10 @@ func TestJWTService_RefreshAccessToken_InvalidToken(t *testing.T) {
 
 	// Try to refresh with access token (should fail)
 	userID := uuid.New()
-	email := "test@example.com"
+	username := "test"
 	roles := []string{"admin"}
 
-	accessToken, err := service.GenerateAccessToken(userID, email, roles)
+	accessToken, err := service.GenerateAccessToken(userID, username, roles)
 	require.NoError(t, err)
 
 	// Try to use access token as refresh token

@@ -26,30 +26,30 @@ func TestAuthUseCase_Register(t *testing.T) {
 		{
 			name: "success - register new user",
 			req: dto.RegisterRequest{
-				Email:    "newuser@example.com",
+				Username: "newuser",
 				Password: "password123",
 				Name:     "New User",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
 				// User doesn't exist
-				userRepo.On("GetByEmail", mock.Anything, "newuser@example.com").Return(nil, domainErrors.ErrUserNotFound)
+				userRepo.On("GetByUsername", mock.Anything, "newuser").Return(nil, domainErrors.ErrUserNotFound)
 
 				// Create user
 				userRepo.On("Create", mock.Anything, mock.MatchedBy(func(u *entity.User) bool {
-					return u.Email == "newuser@example.com" && u.Name == "New User"
+					return u.Username == "newuser" && u.Name == "New User"
 				})).Return(nil)
 
 				// Get user with roles (user ID akan di-generate di dalam use case)
 				userRepo.On("GetWithRoles", mock.Anything, mock.Anything).Return(&entity.User{
 					ID:       uuid.New(),
-					Email:    "newuser@example.com",
+					Username: "newuser",
 					Name:     "New User",
 					IsActive: true,
 					Roles:    []entity.Role{},
 				}, nil)
 
 				// Generate tokens (tidak mengikat ke UUID tertentu)
-				tokenService.On("GenerateAccessToken", mock.Anything, "newuser@example.com", []string{}).Return("access_token", nil)
+				tokenService.On("GenerateAccessToken", mock.Anything, "newuser", []string{}).Return("access_token", nil)
 				tokenService.On("GenerateRefreshToken", mock.Anything).Return("refresh_token", nil)
 			},
 			expectedError: nil,
@@ -57,14 +57,14 @@ func TestAuthUseCase_Register(t *testing.T) {
 		{
 			name: "failure - user already exists",
 			req: dto.RegisterRequest{
-				Email:    "existing@example.com",
+				Username: "existing",
 				Password: "password123",
 				Name:     "Existing User",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
-				userRepo.On("GetByEmail", mock.Anything, "existing@example.com").Return(&entity.User{
-					ID:    uuid.New(),
-					Email: "existing@example.com",
+				userRepo.On("GetByUsername", mock.Anything, "existing").Return(&entity.User{
+					ID:       uuid.New(),
+					Username: "existing",
 				}, nil)
 			},
 			expectedError: domainErrors.ErrUserAlreadyExists,
@@ -89,7 +89,7 @@ func TestAuthUseCase_Register(t *testing.T) {
 				assert.NotNil(t, resp)
 				assert.NotEmpty(t, resp.AccessToken)
 				assert.NotEmpty(t, resp.RefreshToken)
-				assert.Equal(t, tt.req.Email, resp.User.Email)
+				assert.Equal(t, tt.req.Username, resp.User.Username)
 			}
 
 			userRepo.AssertExpectations(t)
@@ -104,7 +104,7 @@ func TestAuthUseCase_Login(t *testing.T) {
 	// Create a user with properly hashed password for testing
 	testUser := &entity.User{
 		ID:       userID,
-		Email:    "user@example.com",
+		Username: "user",
 		Password: "password123",
 		Name:     "Test User",
 		IsActive: true,
@@ -121,22 +121,22 @@ func TestAuthUseCase_Login(t *testing.T) {
 		{
 			name: "success - login with correct credentials",
 			req: dto.LoginRequest{
-				Email:    "user@example.com",
+				Username: "user",
 				Password: "password123",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
 				user := &entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Password: hashedPassword,
 					Name:     "Test User",
 					IsActive: true,
 				}
-				userRepo.On("GetByEmail", mock.Anything, "user@example.com").Return(user, nil)
+				userRepo.On("GetByUsername", mock.Anything, "user").Return(user, nil)
 
 				userWithRoles := &entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Password: hashedPassword,
 					Name:     "Test User",
 					IsActive: true,
@@ -144,7 +144,7 @@ func TestAuthUseCase_Login(t *testing.T) {
 				}
 				userRepo.On("GetWithRoles", mock.Anything, userID).Return(userWithRoles, nil)
 
-				tokenService.On("GenerateAccessToken", userID, "user@example.com", []string{"user"}).Return("access_token", nil)
+				tokenService.On("GenerateAccessToken", userID, "user", []string{"user"}).Return("access_token", nil)
 				tokenService.On("GenerateRefreshToken", userID).Return("refresh_token", nil)
 			},
 			expectedError: nil,
@@ -152,45 +152,45 @@ func TestAuthUseCase_Login(t *testing.T) {
 		{
 			name: "failure - user not found",
 			req: dto.LoginRequest{
-				Email:    "notfound@example.com",
+				Username: "notfound",
 				Password: "password123",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
-				userRepo.On("GetByEmail", mock.Anything, "notfound@example.com").Return(nil, domainErrors.ErrUserNotFound)
+				userRepo.On("GetByUsername", mock.Anything, "notfound").Return(nil, domainErrors.ErrUserNotFound)
 			},
 			expectedError: domainErrors.ErrInvalidCredentials,
 		},
 		{
 			name: "failure - user inactive",
 			req: dto.LoginRequest{
-				Email:    "inactive@example.com",
+				Username: "inactive",
 				Password: "password123",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
 				user := &entity.User{
 					ID:       userID,
-					Email:    "inactive@example.com",
+					Username: "inactive",
 					Password: hashedPassword,
 					IsActive: false,
 				}
-				userRepo.On("GetByEmail", mock.Anything, "inactive@example.com").Return(user, nil)
+				userRepo.On("GetByUsername", mock.Anything, "inactive").Return(user, nil)
 			},
 			expectedError: domainErrors.ErrUserInactive,
 		},
 		{
 			name: "failure - wrong password",
 			req: dto.LoginRequest{
-				Email:    "user@example.com",
+				Username: "user",
 				Password: "wrongpassword",
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, tokenService *mocks.MockTokenService) {
 				user := &entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Password: hashedPassword,
 					IsActive: true,
 				}
-				userRepo.On("GetByEmail", mock.Anything, "user@example.com").Return(user, nil)
+				userRepo.On("GetByUsername", mock.Anything, "user").Return(user, nil)
 			},
 			expectedError: domainErrors.ErrInvalidCredentials,
 		},
@@ -244,14 +244,14 @@ func TestAuthUseCase_RefreshToken(t *testing.T) {
 
 				userWithRoles := &entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					Name:     "Test User",
 					IsActive: true,
 					Roles:    []entity.Role{{ID: uuid.New(), Name: "user"}},
 				}
 				userRepo.On("GetWithRoles", mock.Anything, userID).Return(userWithRoles, nil)
 
-				tokenService.On("GenerateAccessToken", userID, "user@example.com", []string{"user"}).Return("new_access_token", nil)
+				tokenService.On("GenerateAccessToken", userID, "user", []string{"user"}).Return("new_access_token", nil)
 				tokenService.On("GenerateRefreshToken", userID).Return("new_refresh_token", nil)
 			},
 			expectedError: nil,
@@ -295,7 +295,7 @@ func TestAuthUseCase_RefreshToken(t *testing.T) {
 
 				userWithRoles := &entity.User{
 					ID:       userID,
-					Email:    "user@example.com",
+					Username: "user",
 					IsActive: false,
 				}
 				userRepo.On("GetWithRoles", mock.Anything, userID).Return(userWithRoles, nil)

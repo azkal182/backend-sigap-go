@@ -79,7 +79,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 
 		// Store user info in context
 		c.Set("user_id", claims.UserID)
-		c.Set("user_email", claims.Email)
+		c.Set("user_username", claims.Username)
 		c.Set("user_roles", claims.Roles)
 		c.Set("user", user)
 
@@ -113,7 +113,7 @@ func (m *AuthMiddleware) RequirePermission(permission string) gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("RequirePermission: user=%s checking=%s", userEntity.Email, permission)
+		log.Printf("RequirePermission: user=%s checking=%s", userEntity.Username, permission)
 
 		c.Next()
 	}

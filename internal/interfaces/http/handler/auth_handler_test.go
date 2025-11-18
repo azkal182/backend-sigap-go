@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/your-org/go-backend-starter/internal/application/dto"
-	"github.com/your-org/go-backend-starter/internal/interfaces/http/handler/mocks"
 	domainErrors "github.com/your-org/go-backend-starter/internal/domain/errors"
+	"github.com/your-org/go-backend-starter/internal/interfaces/http/handler/mocks"
 )
 
 func setupRouter() *gin.Engine {
@@ -30,20 +30,20 @@ func TestAuthHandler_Register(t *testing.T) {
 		{
 			name: "success - register new user",
 			requestBody: dto.RegisterRequest{
-				Email:    "newuser@example.com",
+				Username: "newuser",
 				Password: "password123",
 				Name:     "New User",
 			},
 			setupMocks: func(mockUseCase *mocks.MockAuthUseCase) {
 				mockUseCase.On("Register", mock.Anything, mock.MatchedBy(func(req dto.RegisterRequest) bool {
-					return req.Email == "newuser@example.com" && req.Name == "New User"
+					return req.Username == "newuser" && req.Name == "New User"
 				})).Return(&dto.AuthResponse{
 					AccessToken:  "access_token",
 					RefreshToken: "refresh_token",
 					User: dto.UserDTO{
-						ID:    "user-id",
-						Email: "newuser@example.com",
-						Name:  "New User",
+						ID:       "user-id",
+						Username: "newuser",
+						Name:     "New User",
 					},
 				}, nil)
 			},
@@ -52,7 +52,7 @@ func TestAuthHandler_Register(t *testing.T) {
 		{
 			name: "failure - invalid request body",
 			requestBody: map[string]interface{}{
-				"email": "invalid-email",
+				"username": "invalid-username",
 			},
 			setupMocks: func(mockUseCase *mocks.MockAuthUseCase) {
 				// No mock call expected for invalid request
@@ -62,7 +62,7 @@ func TestAuthHandler_Register(t *testing.T) {
 		{
 			name: "failure - user already exists",
 			requestBody: dto.RegisterRequest{
-				Email:    "existing@example.com",
+				Username: "existing",
 				Password: "password123",
 				Name:     "Existing User",
 			},
@@ -106,18 +106,18 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "success - login with valid credentials",
 			requestBody: dto.LoginRequest{
-				Email:    "user@example.com",
+				Username: "user",
 				Password: "password123",
 			},
 			setupMocks: func(mockUseCase *mocks.MockAuthUseCase) {
 				mockUseCase.On("Login", mock.Anything, mock.MatchedBy(func(req dto.LoginRequest) bool {
-					return req.Email == "user@example.com"
+					return req.Username == "user"
 				})).Return(&dto.AuthResponse{
 					AccessToken:  "access_token",
 					RefreshToken: "refresh_token",
 					User: dto.UserDTO{
-						ID:    "user-id",
-						Email: "user@example.com",
+						ID:       "user-id",
+						Username: "user",
 					},
 				}, nil)
 			},
@@ -126,7 +126,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "failure - invalid credentials",
 			requestBody: dto.LoginRequest{
-				Email:    "user@example.com",
+				Username: "user",
 				Password: "wrongpassword",
 			},
 			setupMocks: func(mockUseCase *mocks.MockAuthUseCase) {
@@ -137,7 +137,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "failure - invalid request body",
 			requestBody: map[string]interface{}{
-				"email": "invalid-email",
+				"username": "invalid-username",
 			},
 			setupMocks: func(mockUseCase *mocks.MockAuthUseCase) {
 				// No mock call expected
