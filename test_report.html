@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>go-test-report</title>
+    <style type="text/css">
+        body {
+            font-family: sans-serif;
+            background-color: #f3f3f3;
+            border-top: 2px #dee6e8 solid;
+            margin: 0;
+        }
+
+        div.pageHeader span.projectTitle {
+            font-family: serif;
+            font-size: 2em;
+            padding-left: 56px;
+            padding-top: 80px;
+            display: block;
+            color: #a5a5a5;
+            text-shadow: 0 -1px 1px white;
+        }
+
+        div.pageHeader div.testStats {
+            position: absolute;
+            top: 7px;
+            right: 52px;
+            font-size: 0.8em;
+            color: #a2a2a2;
+        }
+
+        div.pageHeader div.testStats span.indicator {
+            font-size: 2em;
+            position: relative;
+            top: 5px;
+            text-shadow: 0 1px 0 white;
+        }
+
+        div.pageHeader div.testStats span strong {
+            margin-right: 16px;
+        }
+
+        div.pageHeader div.testStats span.total {
+            border-right: 1px #afafaf dotted;
+            background: #8298af;
+        }
+
+        div.pageHeader div.testStats span.passed {
+            border-right: 1px #afafaf dotted;
+            background: #6fca83;
+        }
+
+        div.pageHeader div.testStats span.skipped {
+            background: #bababa;
+        }
+
+        div.pageHeader div.testStats span.failed {
+            background: #ff7676;
+        }
+
+        div.pageHeader div.testStats span {
+            margin-right: 1px;
+            height: 55px;
+            padding: 20px 8px 18px;
+            color: white;
+        }
+
+        div.pageHeader .testGroupsTitle {
+            margin: 16px 32px 8px 40px;
+            font-size: 0.9em;
+            color: darkgrey;
+            display: inline-block;
+        }
+
+        div.pageHeader .testExecutionDate {
+            display: inline-block;
+            position: absolute;
+            right: 10px;
+            margin: 14px 32px 8px 40px;
+            color: #9e9e9e;
+            font-size: 0.9em;
+        }
+
+        .testReportContainer {
+            padding: 0 32px 32px 32px;
+        }
+
+        .cardContainer {
+            padding: 16px 16px 16px;
+            box-shadow: 0 4px 4px #d4d4d4;
+            background-color: white;
+        }
+
+        #testResults {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .testResultGroup {
+            width: 24px;
+            height: 24px;
+            background-color: #43c143;
+            margin-left: 1px;
+            margin-bottom: 1px;
+            box-sizing: border-box;
+        }
+
+        .testResultGroup.selected {
+            border: 1px white solid;
+            background-color: black !important;
+        }
+
+        .testResultGroup.skipped {
+            border: 2px gray solid;
+        }
+
+        .testResultGroup.failed {
+            background-color: red;
+        }
+
+        .cardContainer.testGroupList,
+        .cardContainer.testDetail {
+            margin-top: 16px;
+            padding: 16px;
+        }
+
+        .cardContainer.testGroupList {
+            color: #9c9c9c;
+            padding: 0;
+        }
+
+        .cardContainer.testGroupList .testGroupRow {
+            cursor: default;
+            border-bottom: 1px #dadada dotted;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #139e13;
+            pointer-events: none;
+            display: inline-block;
+            overflow: hidden;
+            float: left;
+            padding-top: 10px;
+            padding-left: 20px;
+            padding-right: 12px;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus.skipped {
+            color: gray;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus.failed {
+            color: red;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testTitle {
+            font-size: 0.9em;
+            padding: 12px 0 10px;
+            display: inline-block;
+            pointer-events: none;
+            color: #525252;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            width: calc(100% - 110px);
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testDuration {
+            pointer-events: none;
+        }
+
+        .cardContainer.testGroupList .testGroupRow {
+            position: relative;
+            border-left: 4px #43c143 solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow.skipped {
+            color: gray;
+            border-left: 4px gray solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow.failed {
+            color: red;
+            border-left: 4px red solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow:hover {
+            background-color: #fffaea;
+            transition: 0.250s;
+        }
+
+        .cardContainer .testOutput {
+            padding: 8px 16px 24px 16px;
+        }
+
+        .cardContainer .console {
+            display: block;
+            font-family: monospace;
+            padding: 10px;
+            background-color: #424242;
+            color: #1aff00;
+            border-bottom: 1px #1aff00 dotted;
+            overflow: auto;
+            font-size: 1.1em;
+        }
+
+        .cardContainer .testOutput .testDetail {
+            border-bottom: 1px #d0d0d0 solid;
+            padding: 16px;
+            background-color: #e6e6e6;
+            border-radius: 0 0 4px 4px;
+            color: dimgrey;
+            font-size: 0.8em;
+        }
+
+        .cardContainer .console.skipped{
+            color: #d9d9d9;
+        }
+
+        .cardContainer .console.failed {
+            color: #ffb2b2;
+        }
+
+        .cardContainer .testDuration {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            text-align: right;
+            padding-right: 8px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+<div class="pageHeader">
+    <span class="projectTitle">go-test-report</span>
+    <div class="testStats">
+        <span class="total"><span class="indicator">&boxbox;</span> Total: <strong>107</strong>Duration: <strong>10.592s</strong>
+        </span><span class="passed"><span class="indicator">&check;</span> Passed: <strong>107</strong>
+        </span><span class="skipped"><span class="indicator">&dash;</span> Skipped: <strong>0</strong>
+        </span><span class="failed"><span class="indicator">&cross;</span> Failed: <strong>0</strong>
+        </span>
+    </div>
+    <span class="testGroupsTitle">Test Groups:</span>
+    <span class="testExecutionDate">November 18, 2025 18:26:47</span>
+</div>
+<div class="testReportContainer">
+    <div class="cardContainer">
+        <div id="testResults">
+            
+                <div class="testResultGroup  " id="0"></div>
+            
+                <div class="testResultGroup  " id="1"></div>
+            
+                <div class="testResultGroup  " id="2"></div>
+            
+                <div class="testResultGroup  " id="3"></div>
+            
+                <div class="testResultGroup  " id="4"></div>
+            
+                <div class="testResultGroup  " id="5"></div>
+            
+        </div>
+    </div>
+    <div class="cardContainer testGroupList" id="testGroupList"></div>
+</div>
+<script type="application/javascript">
+    /**
+ * @typedef TestStatus
+ * @property {string} TestName
+ * @property {string} Package
+ * @property {number} ElapsedTime
+ * @property {Array.<string>} Output
+ * @property {boolean} Passed
+ * @property {boolean} Skipped
+ */
+class TestStatus {}
+
+/**
+ * @typedef TestGroupData
+ * @type {object}
+ * @property {string} FailureIndicator
+ * @property {string} SkippedIndicator
+ * @property {Array.<TestStatus>}
+ */
+class TestGroupData {}
+
+/**
+ * @typedef TestResults
+ * @type {Array.<TestGroupData>}
+ */
+class TestResults extends Array {}
+
+/**
+ * @typedef SelectedItems
+ * @property {HTMLElement|EventTarget} testResults
+ * @property {String} selectedTestGroupColor
+ */
+class SelectedItems {}
+
+/**
+ * @typedef GoTestReportElements
+ * @property {TestResults} data
+ * @property {HTMLElement} testResultsElem
+ * @property {HTMLElement} testGroupListElem
+ */
+class GoTestReportElements {}
+
+
+/**
+ * Main entry point for GoTestReport.
+ * @param {GoTestReportElements} elements
+ * @returns {{testResultsClickHandler: testResultsClickHandler}}
+ * @constructor
+ */
+window.GoTestReport = function (elements) {
+  const /**@type {SelectedItems}*/ selectedItems = {
+    testResults: null,
+    selectedTestGroupColor: null
+  }
+
+  function addEventData(event) {
+    if (event.data == null) {
+      event.data = {target: event.target}
+    }
+    return event
+  }
+
+
+  const goTestReport = {
+    /**
+     * Invoked when a user clicks on one of the test group div elements.
+     * @param {HTMLElement} target The element associated with the test group.
+     * @param {boolean} shiftKey If pressed, all of test detail associated to the test group is shown.
+     * @param {TestResults} data
+     * @param {SelectedItems} selectedItems
+     * @param {function(target: Element, data: TestResults)} testGroupListHandler
+     */
+    testResultsClickHandler: function (target,
+                                       shiftKey,
+                                       data,
+                                       selectedItems,
+                                       testGroupListHandler) {
+
+      if (target.classList.contains('testResultGroup') === false) {
+        return
+      }
+      if (selectedItems.testResults != null) {
+        let testResultsElement = /**@type {HTMLElement}*/ selectedItems.testResults
+        testResultsElement.classList.remove("selected")
+        testResultsElement.style.backgroundColor = selectedItems.selectedTestGroupColor
+      }
+      const testGroupId = /**@type {number}*/ target.id
+      if ((target.id === undefined)
+        || (data[testGroupId] === undefined)
+        || (data[testGroupId]['TestResults'] === undefined)) {
+        return
+      }
+      const testResults = /**@type {TestResults}*/ data[testGroupId]['TestResults']
+      let testGroupList = /**@type {string}*/ ''
+      selectedItems.selectedTestGroupColor = getComputedStyle(target).getPropertyValue('background-color')
+      selectedItems.testResults = target
+      target.classList.add("selected")
+      for (let i = 0; i < testResults.length; i++) {
+        const testResult = /**@type {TestGroupData}*/ testResults[i]
+        const testPassed = /**@type {boolean}*/ testResult.Passed
+        const testSkipped = /**@type {boolean}*/ testResult.Skipped
+        const testPassedStatus = /**@type {string}*/ (testPassed) ? '' : (testSkipped ? 'skipped' : 'failed')
+        const testId = /**@type {string}*/ target.attributes['id'].value
+        testGroupList += `<div class="testGroupRow ${testPassedStatus}" data-groupid="${testId}" data-index="${i}">
+        <span class="testStatus ${testPassedStatus}">${(testPassed) ? '&check' : (testSkipped ? '&dash' : '&cross')};</span>
+        <span class="testTitle">${testResult.TestName}</span>
+        <span class="testDuration"><span>${testResult.ElapsedTime}s </span>⏱</span>
+      </div>`
+      }
+      const testGroupListElem = elements.testGroupListElem
+      testGroupListElem.innerHTML = ''
+      testGroupListElem.innerHTML = testGroupList
+
+      if (shiftKey) {
+        testGroupListElem.querySelectorAll('.testGroupRow')
+                         .forEach((elem) => testGroupListHandler(elem, data))
+      } else if (testResults.length === 1) {
+        testGroupListHandler(testGroupListElem.querySelector('.testGroupRow'), data)
+      }
+    },
+
+    /**
+     *
+     * @param {Element} target
+     * @param {TestResults} data
+     */
+    testGroupListHandler: function (target, data) {
+      const attribs = target['attributes']
+      if (attribs.hasOwnProperty('data-groupid')) {
+        const groupId = /**@type {number}*/ attribs['data-groupid'].value
+        const testIndex = /**@type {number}*/ attribs['data-index'].value
+        const testStatus = /**@type {TestStatus}*/ data[groupId]['TestResults'][testIndex]
+        const testOutputDiv = /**@type {HTMLDivElement}*/ target.querySelector('div.testOutput')
+
+        if (testOutputDiv == null) {
+          const testOutputDiv = document.createElement('div')
+          testOutputDiv.classList.add('testOutput')
+          const consolePre = document.createElement('pre')
+          consolePre.classList.add('console')
+          const testDetailDiv = document.createElement('div')
+          testDetailDiv.classList.add('testDetail')
+          const packageNameDiv = document.createElement('div')
+          packageNameDiv.classList.add('package')
+          packageNameDiv.innerHTML = `<strong>Package:</strong> ${testStatus.Package}`
+          const testFileNameDiv = document.createElement('div')
+          testFileNameDiv.classList.add('filename')
+          if (testStatus.TestFileName.trim() === "") {
+            testFileNameDiv.innerHTML = `<strong>Filename:</strong> n/a &nbsp;&nbsp;`
+          } else {
+            testFileNameDiv.innerHTML = `<strong>Filename:</strong> ${testStatus.TestFileName} &nbsp;&nbsp;`
+            testFileNameDiv.innerHTML += `<strong>Line:</strong> ${testStatus.TestFunctionDetail.Line} `
+            testFileNameDiv.innerHTML += `<strong>Col:</strong> ${testStatus.TestFunctionDetail.Col}`
+          }
+          testDetailDiv.insertAdjacentElement('beforeend', packageNameDiv)
+          testDetailDiv.insertAdjacentElement('beforeend', testFileNameDiv)
+          testOutputDiv.insertAdjacentElement('afterbegin', consolePre)
+          testOutputDiv.insertAdjacentElement('beforeend', testDetailDiv)
+          target.insertAdjacentElement('beforeend', testOutputDiv)
+
+          if (testStatus.Passed) {
+            consolePre.classList.remove('skipped')
+            consolePre.classList.remove('failed')
+          } else if (testStatus.Skipped) {
+            consolePre.classList.add('skipped')
+            consolePre.classList.remove('failed')
+          } else {
+            consolePre.classList.remove('skipped')
+            consolePre.classList.add('failed')
+          }
+          consolePre.textContent = testStatus.Output.join('')
+        } else {
+          testOutputDiv.remove()
+        }
+      }
+    }
+  }
+
+  //+------------------------+
+  //|    setup DOM events    |
+  //+------------------------+
+  elements.testResultsElem
+          .addEventListener('click', event =>
+            goTestReport.testResultsClickHandler(/**@type {HTMLElement}*/ addEventData(event).data.target,
+                                                 event.shiftKey,
+                                                 elements.data,
+                                                 selectedItems,
+                                                 goTestReport.testGroupListHandler))
+
+  elements.testGroupListElem
+          .addEventListener('click', event =>
+            goTestReport.testGroupListHandler(/**@type {Element}*/ event.target,
+                                              elements.data))
+
+  return goTestReport
+}
+
+
+    
+
+    const data = [{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestAuditLogUseCase_ListAuditLogs","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuditLogUseCase_ListAuditLogs\n","--- PASS: TestAuditLogUseCase_ListAuditLogs (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"audit_log_usecase_test.go","TestFunctionDetail":{"Line":59,"Col":1}},{"TestName":"TestAuthHandler_Login","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Login\n","--- PASS: TestAuthHandler_Login (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_handler_test.go","TestFunctionDetail":{"Line":99,"Col":1}},{"TestName":"TestAuthHandler_Login/failure_-_invalid_credentials","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Login/failure_-_invalid_credentials\n","--- PASS: TestAuthHandler_Login/failure_-_invalid_credentials (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_Login/failure_-_invalid_request_body","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Login/failure_-_invalid_request_body\n","--- PASS: TestAuthHandler_Login/failure_-_invalid_request_body (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_Login/success_-_login_with_valid_credentials","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Login/success_-_login_with_valid_credentials\n","--- PASS: TestAuthHandler_Login/success_-_login_with_valid_credentials (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_RefreshToken","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_RefreshToken\n","--- PASS: TestAuthHandler_RefreshToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_handler_test.go","TestFunctionDetail":{"Line":172,"Col":1}},{"TestName":"TestAuthHandler_RefreshToken/failure_-_invalid_token","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_RefreshToken/failure_-_invalid_token\n","--- PASS: TestAuthHandler_RefreshToken/failure_-_invalid_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_RefreshToken/failure_-_missing_refresh_token","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_RefreshToken/failure_-_missing_refresh_token\n","--- PASS: TestAuthHandler_RefreshToken/failure_-_missing_refresh_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_RefreshToken/success_-_refresh_token","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_RefreshToken/success_-_refresh_token\n","--- PASS: TestAuthHandler_RefreshToken/success_-_refresh_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_Register","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Register\n","--- PASS: TestAuthHandler_Register (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_handler_test.go","TestFunctionDetail":{"Line":23,"Col":1}},{"TestName":"TestAuthHandler_Register/failure_-_invalid_request_body","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Register/failure_-_invalid_request_body\n","--- PASS: TestAuthHandler_Register/failure_-_invalid_request_body (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_Register/failure_-_user_already_exists","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Register/failure_-_user_already_exists\n","--- PASS: TestAuthHandler_Register/failure_-_user_already_exists (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthHandler_Register/success_-_register_new_user","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http/handler","ElapsedTime":0,"Output":["","=== RUN   TestAuthHandler_Register/success_-_register_new_user\n","--- PASS: TestAuthHandler_Register/success_-_register_new_user (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthIntegration_InvalidCredentials","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http","ElapsedTime":0.23,"Output":["","=== RUN   TestAuthIntegration_InvalidCredentials\n","2025/11/18 18:26:43 CORS middleware: origin=\"\" allowedOrigin=\"*\"\n","\r\n","2025/11/18 18:26:43 \u001b[31;1m/Users/mackintosh/Documents/project/golang/go-lang-starter/internal/interfaces/http/integration_test.go:49 \u001b[35;1mrecord not found\n","\u001b[0m\u001b[33m[0.104ms] \u001b[34;1m[rows:0]\u001b[0m SELECT * FROM `users` WHERE email = \"test@example.com\" ORDER BY `users`.`id` LIMIT 1\n","[GIN] 2025/11/18 - 18:26:43 | 201 |   130.51221ms |                 | POST     \"/api/auth/register\"\n","2025/11/18 18:26:43 CORS middleware: origin=\"\" allowedOrigin=\"*\"\n","[GIN] 2025/11/18 - 18:26:43 | 401 |    94.17745ms |                 | POST     \"/api/auth/login\"\n","--- PASS: TestAuthIntegration_InvalidCredentials (0.23s)",""],"Passed":true,"Skipped":false,"TestFileName":"integration_test.go","TestFunctionDetail":{"Line":227,"Col":1}},{"TestName":"TestAuthIntegration_RegisterAndLogin","Package":"github.com/your-org/go-backend-starter/internal/interfaces/http","ElapsedTime":0.2,"Output":["","=== RUN   TestAuthIntegration_RegisterAndLogin\n","2025/11/18 18:26:43 CORS middleware: origin=\"\" allowedOrigin=\"*\"\n","\r\n","2025/11/18 18:26:43 \u001b[31;1m/Users/mackintosh/Documents/project/golang/go-lang-starter/internal/interfaces/http/integration_test.go:49 \u001b[35;1mrecord not found\n","\u001b[0m\u001b[33m[0.233ms] \u001b[34;1m[rows:0]\u001b[0m SELECT * FROM `users` WHERE email = \"integration@example.com\" ORDER BY `users`.`id` LIMIT 1\n","[GIN] 2025/11/18 - 18:26:43 | 201 |    97.70848ms |                 | POST     \"/api/auth/register\"\n","2025/11/18 18:26:43 CORS middleware: origin=\"\" allowedOrigin=\"*\"\n","[GIN] 2025/11/18 - 18:26:43 | 200 |   94.935493ms |                 | POST     \"/api/auth/login\"\n","--- PASS: TestAuthIntegration_RegisterAndLogin (0.20s)",""],"Passed":true,"Skipped":false,"TestFileName":"integration_test.go","TestFunctionDetail":{"Line":165,"Col":1}},{"TestName":"TestAuthUseCase_Login","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.71,"Output":["","=== RUN   TestAuthUseCase_Login\n","--- PASS: TestAuthUseCase_Login (0.71s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_usecase_test.go","TestFunctionDetail":{"Line":101,"Col":1}},{"TestName":"TestAuthUseCase_Login/failure_-_user_inactive","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_Login/failure_-_user_inactive\n","--- PASS: TestAuthUseCase_Login/failure_-_user_inactive (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_Login/failure_-_user_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_Login/failure_-_user_not_found\n","--- PASS: TestAuthUseCase_Login/failure_-_user_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_Login/failure_-_wrong_password","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.26,"Output":["","=== RUN   TestAuthUseCase_Login/failure_-_wrong_password\n","--- PASS: TestAuthUseCase_Login/failure_-_wrong_password (0.26s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_Login/success_-_login_with_correct_credentials","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.2,"Output":["","=== RUN   TestAuthUseCase_Login/success_-_login_with_correct_credentials\n","--- PASS: TestAuthUseCase_Login/success_-_login_with_correct_credentials (0.20s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestAuthUseCase_RefreshToken","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_RefreshToken\n","--- PASS: TestAuthUseCase_RefreshToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_usecase_test.go","TestFunctionDetail":{"Line":224,"Col":1}},{"TestName":"TestAuthUseCase_RefreshToken/failure_-_invalid_token","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_RefreshToken/failure_-_invalid_token\n","--- PASS: TestAuthUseCase_RefreshToken/failure_-_invalid_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_RefreshToken/failure_-_user_inactive","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_RefreshToken/failure_-_user_inactive\n","--- PASS: TestAuthUseCase_RefreshToken/failure_-_user_inactive (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_RefreshToken/failure_-_user_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_RefreshToken/failure_-_user_not_found\n","--- PASS: TestAuthUseCase_RefreshToken/failure_-_user_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_RefreshToken/success_-_refresh_token","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_RefreshToken/success_-_refresh_token\n","--- PASS: TestAuthUseCase_RefreshToken/success_-_refresh_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_Register","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.13,"Output":["","=== RUN   TestAuthUseCase_Register\n","--- PASS: TestAuthUseCase_Register (0.13s)",""],"Passed":true,"Skipped":false,"TestFileName":"auth_usecase_test.go","TestFunctionDetail":{"Line":19,"Col":1}},{"TestName":"TestAuthUseCase_Register/failure_-_user_already_exists","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestAuthUseCase_Register/failure_-_user_already_exists\n","--- PASS: TestAuthUseCase_Register/failure_-_user_already_exists (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestAuthUseCase_Register/success_-_register_new_user","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.13,"Output":["","=== RUN   TestAuthUseCase_Register/success_-_register_new_user\n","--- PASS: TestAuthUseCase_Register/success_-_register_new_user (0.13s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_CreateDormitory","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_CreateDormitory\n","--- PASS: TestDormitoryUseCase_CreateDormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"dormitory_usecase_test.go","TestFunctionDetail":{"Line":16,"Col":1}},{"TestName":"TestDormitoryUseCase_CreateDormitory/success_-_create_dormitory","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_CreateDormitory/success_-_create_dormitory\n","--- PASS: TestDormitoryUseCase_CreateDormitory/success_-_create_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_DeleteDormitory","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_DeleteDormitory\n","--- PASS: TestDormitoryUseCase_DeleteDormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"dormitory_usecase_test.go","TestFunctionDetail":{"Line":182,"Col":1}},{"TestName":"TestDormitoryUseCase_DeleteDormitory/failure_-_dormitory_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_DeleteDormitory/failure_-_dormitory_not_found\n","--- PASS: TestDormitoryUseCase_DeleteDormitory/failure_-_dormitory_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_DeleteDormitory/success_-_delete_dormitory","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_DeleteDormitory/success_-_delete_dormitory\n","--- PASS: TestDormitoryUseCase_DeleteDormitory/success_-_delete_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_GetDormitoryByID","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_GetDormitoryByID\n","--- PASS: TestDormitoryUseCase_GetDormitoryByID (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"dormitory_usecase_test.go","TestFunctionDetail":{"Line":63,"Col":1}},{"TestName":"TestDormitoryUseCase_GetDormitoryByID/failure_-_dormitory_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_GetDormitoryByID/failure_-_dormitory_not_found\n","--- PASS: TestDormitoryUseCase_GetDormitoryByID/failure_-_dormitory_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_GetDormitoryByID/success_-_get_dormitory_by_id","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_GetDormitoryByID/success_-_get_dormitory_by_id\n","--- PASS: TestDormitoryUseCase_GetDormitoryByID/success_-_get_dormitory_by_id (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_ListDormitories","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_ListDormitories\n","--- PASS: TestDormitoryUseCase_ListDormitories (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"dormitory_usecase_test.go","TestFunctionDetail":{"Line":234,"Col":1}},{"TestName":"TestDormitoryUseCase_ListDormitories/success_-_list_dormitories_with_pagination","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_ListDormitories/success_-_list_dormitories_with_pagination\n","--- PASS: TestDormitoryUseCase_ListDormitories/success_-_list_dormitories_with_pagination (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDormitoryUseCase_UpdateDormitory","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_UpdateDormitory\n","--- PASS: TestDormitoryUseCase_UpdateDormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"dormitory_usecase_test.go","TestFunctionDetail":{"Line":120,"Col":1}},{"TestName":"TestDormitoryUseCase_UpdateDormitory/failure_-_dormitory_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_UpdateDormitory/failure_-_dormitory_not_found\n","--- PASS: TestDormitoryUseCase_UpdateDormitory/failure_-_dormitory_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestDormitoryUseCase_UpdateDormitory/success_-_update_dormitory_name","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestDormitoryUseCase_UpdateDormitory/success_-_update_dormitory_name\n","--- PASS: TestDormitoryUseCase_UpdateDormitory/success_-_update_dormitory_name (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestJWTService_GenerateAccessToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_GenerateAccessToken\n","--- PASS: TestJWTService_GenerateAccessToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":14,"Col":1}},{"TestName":"TestJWTService_GenerateRefreshToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_GenerateRefreshToken\n","--- PASS: TestJWTService_GenerateRefreshToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":29,"Col":1}},{"TestName":"TestJWTService_RefreshAccessToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_RefreshAccessToken\n","--- PASS: TestJWTService_RefreshAccessToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":145,"Col":1}},{"TestName":"TestJWTService_RefreshAccessToken_ExpiredToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0.01,"Output":["","=== RUN   TestJWTService_RefreshAccessToken_ExpiredToken\n","--- PASS: TestJWTService_RefreshAccessToken_ExpiredToken (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":183,"Col":1}},{"TestName":"TestJWTService_RefreshAccessToken_InvalidToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_RefreshAccessToken_InvalidToken\n","--- PASS: TestJWTService_RefreshAccessToken_InvalidToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":163,"Col":1}},{"TestName":"TestJWTService_ValidateToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken\n","--- PASS: TestJWTService_ValidateToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":42,"Col":1}},{"TestName":"TestJWTService_ValidateToken_ExpiredToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0.01,"Output":["","=== RUN   TestJWTService_ValidateToken_ExpiredToken\n","--- PASS: TestJWTService_ValidateToken_ExpiredToken (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":98,"Col":1}},{"TestName":"TestJWTService_ValidateToken_InvalidToken","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken_InvalidToken\n","--- PASS: TestJWTService_ValidateToken_InvalidToken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":65,"Col":1}},{"TestName":"TestJWTService_ValidateToken_InvalidToken/empty_token","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken_InvalidToken/empty_token\n","--- PASS: TestJWTService_ValidateToken_InvalidToken/empty_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestJWTService_ValidateToken_InvalidToken/invalid_token_string","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken_InvalidToken/invalid_token_string\n","--- PASS: TestJWTService_ValidateToken_InvalidToken/invalid_token_string (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestJWTService_ValidateToken_InvalidToken/malformed_token","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken_InvalidToken/malformed_token\n","--- PASS: TestJWTService_ValidateToken_InvalidToken/malformed_token (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestJWTService_ValidateToken_WrongSecret","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/service","ElapsedTime":0,"Output":["","=== RUN   TestJWTService_ValidateToken_WrongSecret\n","--- PASS: TestJWTService_ValidateToken_WrongSecret (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"jwt_service_test.go","TestFunctionDetail":{"Line":123,"Col":1}},{"TestName":"TestRole_HasPermission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission\n","--- PASS: TestRole_HasPermission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"role_test.go","TestFunctionDetail":{"Line":10,"Col":1}},{"TestName":"TestRole_HasPermission/failure_-_does_not_have_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission/failure_-_does_not_have_permission\n","--- PASS: TestRole_HasPermission/failure_-_does_not_have_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestRole_HasPermission/failure_-_empty_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission/failure_-_empty_permission\n","--- PASS: TestRole_HasPermission/failure_-_empty_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestRole_HasPermission/success_-_has_another_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission/success_-_has_another_permission\n","--- PASS: TestRole_HasPermission/success_-_has_another_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestRole_HasPermission/success_-_has_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission/success_-_has_permission\n","--- PASS: TestRole_HasPermission/success_-_has_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestRole_HasPermission_EmptyPermissions","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestRole_HasPermission_EmptyPermissions\n","--- PASS: TestRole_HasPermission_EmptyPermissions (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"role_test.go","TestFunctionDetail":{"Line":56,"Col":1}},{"TestName":"TestUserRepository_Create","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0.01,"Output":["","=== RUN   TestUserRepository_Create\n","--- PASS: TestUserRepository_Create (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":16,"Col":1}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestUserRepository_Delete","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0,"Output":["","=== RUN   TestUserRepository_Delete\n","\r\n","2025/11/18 18:26:43 \u001b[31;1m/Users/mackintosh/Documents/project/golang/go-lang-starter/internal/infrastructure/repository/user_repository_test.go:160 \u001b[35;1mrecord not found\n","\u001b[0m\u001b[33m[0.064ms] \u001b[34;1m[rows:0]\u001b[0m SELECT * FROM `users` WHERE id = \"87308d7f-5f09-44c6-8414-7cc2ca500fc8\" ORDER BY `users`.`id` LIMIT 1\n","--- PASS: TestUserRepository_Delete (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":135,"Col":1}},{"TestName":"TestUserRepository_GetByEmail","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0.01,"Output":["","=== RUN   TestUserRepository_GetByEmail\n","\r\n","2025/11/18 18:26:43 \u001b[31;1m/Users/mackintosh/Documents/project/golang/go-lang-starter/internal/infrastructure/repository/user_repository.go:39 \u001b[35;1mrecord not found\n","\u001b[0m\u001b[33m[0.078ms] \u001b[34;1m[rows:0]\u001b[0m SELECT * FROM `users` WHERE email = \"notfound@example.com\" ORDER BY `users`.`id` LIMIT 1\n","--- PASS: TestUserRepository_GetByEmail (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":74,"Col":1}},{"TestName":"TestUserRepository_GetByID","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0.01,"Output":["","=== RUN   TestUserRepository_GetByID\n","\r\n","2025/11/18 18:26:43 \u001b[31;1m/Users/mackintosh/Documents/project/golang/go-lang-starter/internal/infrastructure/repository/user_repository.go:30 \u001b[35;1mrecord not found\n","\u001b[0m\u001b[33m[0.063ms] \u001b[34;1m[rows:0]\u001b[0m SELECT * FROM `users` WHERE id = \"a8ce95d7-4ae0-4a61-82c4-786318a6cb23\" ORDER BY `users`.`id` LIMIT 1\n","--- PASS: TestUserRepository_GetByID (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":44,"Col":1}},{"TestName":"TestUserRepository_GetWithRoles","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0.01,"Output":["","=== RUN   TestUserRepository_GetWithRoles\n","--- PASS: TestUserRepository_GetWithRoles (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":198,"Col":1}},{"TestName":"TestUserRepository_List","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0.01,"Output":["","=== RUN   TestUserRepository_List\n","--- PASS: TestUserRepository_List (0.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":164,"Col":1}},{"TestName":"TestUserRepository_Update","Package":"github.com/your-org/go-backend-starter/internal/infrastructure/repository","ElapsedTime":0,"Output":["","=== RUN   TestUserRepository_Update\n","--- PASS: TestUserRepository_Update (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_repository_test.go","TestFunctionDetail":{"Line":104,"Col":1}},{"TestName":"TestUserUseCase_CreateUser","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.3,"Output":["","=== RUN   TestUserUseCase_CreateUser\n","--- PASS: TestUserUseCase_CreateUser (0.30s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_usecase_test.go","TestFunctionDetail":{"Line":22,"Col":1}},{"TestName":"TestUserUseCase_CreateUser/failure_-_user_already_exists","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_CreateUser/failure_-_user_already_exists\n","--- PASS: TestUserUseCase_CreateUser/failure_-_user_already_exists (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_CreateUser/success_-_create_user_with_roles","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.14,"Output":["","=== RUN   TestUserUseCase_CreateUser/success_-_create_user_with_roles\n","--- PASS: TestUserUseCase_CreateUser/success_-_create_user_with_roles (0.14s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_CreateUser/success_-_create_user_without_roles","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0.16,"Output":["","=== RUN   TestUserUseCase_CreateUser/success_-_create_user_without_roles\n","--- PASS: TestUserUseCase_CreateUser/success_-_create_user_without_roles (0.16s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_DeleteUser","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_DeleteUser\n","--- PASS: TestUserUseCase_DeleteUser (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_usecase_test.go","TestFunctionDetail":{"Line":276,"Col":1}},{"TestName":"TestUserUseCase_DeleteUser/failure_-_user_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_DeleteUser/failure_-_user_not_found\n","--- PASS: TestUserUseCase_DeleteUser/failure_-_user_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_DeleteUser/success_-_delete_user","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_DeleteUser/success_-_delete_user\n","--- PASS: TestUserUseCase_DeleteUser/success_-_delete_user (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_GetUserByID","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_GetUserByID\n","--- PASS: TestUserUseCase_GetUserByID (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_usecase_test.go","TestFunctionDetail":{"Line":129,"Col":1}},{"TestName":"TestUserUseCase_GetUserByID/failure_-_user_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_GetUserByID/failure_-_user_not_found\n","--- PASS: TestUserUseCase_GetUserByID/failure_-_user_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_GetUserByID/success_-_get_user_by_id","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_GetUserByID/success_-_get_user_by_id\n","--- PASS: TestUserUseCase_GetUserByID/success_-_get_user_by_id (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_ListUsers","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_ListUsers\n","--- PASS: TestUserUseCase_ListUsers (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_usecase_test.go","TestFunctionDetail":{"Line":328,"Col":1}},{"TestName":"TestUserUseCase_ListUsers/success_-_default_page_and_pageSize","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_ListUsers/success_-_default_page_and_pageSize\n","--- PASS: TestUserUseCase_ListUsers/success_-_default_page_and_pageSize (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_ListUsers/success_-_list_users_with_pagination","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_ListUsers/success_-_list_users_with_pagination\n","--- PASS: TestUserUseCase_ListUsers/success_-_list_users_with_pagination (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_ListUsers/success_-_max_pageSize_capped_at_100","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_ListUsers/success_-_max_pageSize_capped_at_100\n","--- PASS: TestUserUseCase_ListUsers/success_-_max_pageSize_capped_at_100 (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestUserUseCase_UpdateUser","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_UpdateUser\n","--- PASS: TestUserUseCase_UpdateUser (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_usecase_test.go","TestFunctionDetail":{"Line":186,"Col":1}},{"TestName":"TestUserUseCase_UpdateUser/failure_-_email_already_taken","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_UpdateUser/failure_-_email_already_taken\n","--- PASS: TestUserUseCase_UpdateUser/failure_-_email_already_taken (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_UpdateUser/failure_-_user_not_found","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_UpdateUser/failure_-_user_not_found\n","--- PASS: TestUserUseCase_UpdateUser/failure_-_user_not_found (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUserUseCase_UpdateUser/success_-_update_user_name","Package":"github.com/your-org/go-backend-starter/internal/application/usecase","ElapsedTime":0,"Output":["","=== RUN   TestUserUseCase_UpdateUser/success_-_update_user_name\n","--- PASS: TestUserUseCase_UpdateUser/success_-_update_user_name (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CanAccessDormitory","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory\n","--- PASS: TestUser_CanAccessDormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_test.go","TestFunctionDetail":{"Line":197,"Col":1}},{"TestName":"TestUser_CanAccessDormitory/failure_-_user_cannot_access_unassigned_dormitory","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory/failure_-_user_cannot_access_unassigned_dormitory\n","--- PASS: TestUser_CanAccessDormitory/failure_-_user_cannot_access_unassigned_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CanAccessDormitory/failure_-_user_with_no_roles_or_dormitories","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory/failure_-_user_with_no_roles_or_dormitories\n","--- PASS: TestUser_CanAccessDormitory/failure_-_user_with_no_roles_or_dormitories (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CanAccessDormitory/success_-_admin_can_access_any_dormitory","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory/success_-_admin_can_access_any_dormitory\n","--- PASS: TestUser_CanAccessDormitory/success_-_admin_can_access_any_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CanAccessDormitory/success_-_super_admin_can_access_any_dormitory","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory/success_-_super_admin_can_access_any_dormitory\n","--- PASS: TestUser_CanAccessDormitory/success_-_super_admin_can_access_any_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CanAccessDormitory/success_-_user_can_access_assigned_dormitory","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_CanAccessDormitory/success_-_user_can_access_assigned_dormitory\n","--- PASS: TestUser_CanAccessDormitory/success_-_user_can_access_assigned_dormitory (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CheckPassword","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.68,"Output":["","=== RUN   TestUser_CheckPassword\n","--- PASS: TestUser_CheckPassword (0.68s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_test.go","TestFunctionDetail":{"Line":53,"Col":1}},{"TestName":"TestUser_CheckPassword/failure_-_empty_password","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.17,"Output":["","=== RUN   TestUser_CheckPassword/failure_-_empty_password\n","--- PASS: TestUser_CheckPassword/failure_-_empty_password (0.17s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CheckPassword/failure_-_incorrect_password","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.18,"Output":["","=== RUN   TestUser_CheckPassword/failure_-_incorrect_password\n","--- PASS: TestUser_CheckPassword/failure_-_incorrect_password (0.18s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_CheckPassword/success_-_correct_password","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.13,"Output":["","=== RUN   TestUser_CheckPassword/success_-_correct_password\n","--- PASS: TestUser_CheckPassword/success_-_correct_password (0.13s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasPermission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasPermission\n","--- PASS: TestUser_HasPermission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_test.go","TestFunctionDetail":{"Line":94,"Col":1}},{"TestName":"TestUser_HasPermission/failure_-_does_not_have_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasPermission/failure_-_does_not_have_permission\n","--- PASS: TestUser_HasPermission/failure_-_does_not_have_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasPermission/failure_-_empty_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasPermission/failure_-_empty_permission\n","--- PASS: TestUser_HasPermission/failure_-_empty_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasPermission/success_-_has_permission","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasPermission/success_-_has_permission\n","--- PASS: TestUser_HasPermission/success_-_has_permission (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasPermission/success_-_has_permission_from_different_role","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasPermission/success_-_has_permission_from_different_role\n","--- PASS: TestUser_HasPermission/success_-_has_permission_from_different_role (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasRole","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasRole\n","--- PASS: TestUser_HasRole (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_test.go","TestFunctionDetail":{"Line":152,"Col":1}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestUser_HasRole/failure_-_does_not_have_role","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasRole/failure_-_does_not_have_role\n","--- PASS: TestUser_HasRole/failure_-_does_not_have_role (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasRole/failure_-_empty_role","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasRole/failure_-_empty_role\n","--- PASS: TestUser_HasRole/failure_-_empty_role (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasRole/success_-_has_another_role","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasRole/success_-_has_another_role\n","--- PASS: TestUser_HasRole/success_-_has_another_role (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HasRole/success_-_has_role","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0,"Output":["","=== RUN   TestUser_HasRole/success_-_has_role\n","--- PASS: TestUser_HasRole/success_-_has_role (0.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HashPassword","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.4,"Output":["","=== RUN   TestUser_HashPassword\n","--- PASS: TestUser_HashPassword (0.40s)",""],"Passed":true,"Skipped":false,"TestFileName":"user_test.go","TestFunctionDetail":{"Line":11,"Col":1}},{"TestName":"TestUser_HashPassword/success_-_empty_password","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.23,"Output":["","=== RUN   TestUser_HashPassword/success_-_empty_password\n","--- PASS: TestUser_HashPassword/success_-_empty_password (0.23s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestUser_HashPassword/success_-_hash_password","Package":"github.com/your-org/go-backend-starter/internal/domain/entity","ElapsedTime":0.17,"Output":["","=== RUN   TestUser_HashPassword/success_-_hash_password\n","--- PASS: TestUser_HashPassword/success_-_hash_password (0.17s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]}]
+
+    const report = window.GoTestReport({
+                                         data: data,
+                                         testResultsElem: document.getElementById('testResults'),
+                                         testGroupListElem: document.getElementById('testGroupList')
+                                       });
+
+
+</script>
+</body>
+</html>

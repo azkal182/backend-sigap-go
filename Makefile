@@ -9,6 +9,9 @@ build:
 test:
 	go test -v ./...
 
+test-report:
+	go test -v ./... -json | go-test-report
+
 migrate-up:
 	go run cmd/migrate/main.go -command up
 
