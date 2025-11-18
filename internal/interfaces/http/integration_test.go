@@ -132,6 +132,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
+	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -139,12 +140,13 @@ func setupTestRouter(t *testing.T) (*gin.Engine, func()) {
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
+	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, authMiddleware)
 
 	cleanup := func() {
 		database.DB = originalDB // Restore original DB

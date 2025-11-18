@@ -159,6 +159,11 @@ JWT_REFRESH_TOKEN_EXPIRY=168h
 # Application
 APP_ENV=development
 LOG_LEVEL=debug
+
+# CORS
+# Comma-separated list of allowed origins, e.g.:
+# CORS_ALLOWED_ORIGINS=http://localhost:3000,https://app.example.com
+CORS_ALLOWED_ORIGINS=
 ```
 
 ### 4. Setup Database
@@ -247,6 +252,9 @@ Server akan berjalan di `http://localhost:8080`
 - `POST /api/roles/:id/permissions` - Assign permission to role (requires `role:update` permission, protected roles cannot be modified)
 - `DELETE /api/roles/:id/permissions` - Remove permission from role (requires `role:update` permission, protected roles cannot be modified)
 
+### Permissions (Protected)
+- `GET /api/permissions` - List permissions (with pagination, requires `role:read` permission)
+
 ### Dormitories (Protected)
 - `GET /api/dormitories` - List dormitories (with pagination)
 - `GET /api/dormitories/:id` - Get dormitory by ID (requires dormitory access)
@@ -257,7 +265,325 @@ Server akan berjalan di `http://localhost:8080`
 ### Health Check
 - `GET /health` - Health check endpoint
 
-## 📤 API Response Format
+## � Contoh Request & Response
+
+Bagian ini memberikan contoh request dan response sukses (1 row data) untuk endpoint utama.
+
+### 1. Authentication
+
+#### Register
+
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "name": "John Doe"
+  }'
+```
+
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "access_token": "<jwt-token>",
+    "refresh_token": "<jwt-refresh-token>",
+    "expires_at": "2024-01-01T12:15:00Z",
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "roles": ["user"]
+    }
+  }
+}
+```
+
+### 3a. Permissions
+
+#### List Permissions
+
+```bash
+curl -X GET 'http://localhost:8080/api/permissions?page=1&page_size=10' \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Permissions retrieved successfully",
+  "data": {
+    "permissions": [
+      {
+        "id": "uuid",
+        "name": "user:read",
+        "slug": "user-read",
+        "resource": "user",
+        "action": "read"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+#### Login
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
+```
+
+**Response 200:** mirip dengan response register (berisi access token, refresh token, dan user).
+
+---
+
+### 2. Users
+
+#### List Users
+
+```bash
+curl -X GET 'http://localhost:8080/api/users?page=1&page_size=10' \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": {
+    "users": [
+      {
+        "id": "uuid",
+        "email": "admin@example.com",
+        "name": "Admin User",
+        "is_active": true,
+        "roles": ["admin"]
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+#### Get User by ID
+
+```bash
+curl -X GET http://localhost:8080/api/users/<USER_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:** satu objek user seperti di atas.
+
+---
+
+### 3. Roles
+
+#### List Roles
+
+```bash
+curl -X GET 'http://localhost:8080/api/roles?page=1&page_size=10' \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Roles retrieved successfully",
+  "data": {
+    "roles": [
+      {
+        "id": "uuid",
+        "name": "Admin",
+        "slug": "admin",
+        "is_active": true,
+        "is_protected": true,
+        "permissions": ["user:read", "user:create"]
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+---
+
+### 4. Dormitories
+
+#### List Dormitories
+
+```bash
+curl -X GET 'http://localhost:8080/api/dormitories?page=1&page_size=10' \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Dormitories retrieved successfully",
+  "data": {
+    "dormitories": [
+      {
+        "id": "uuid",
+        "name": "Dormitory A",
+        "description": "Main dormitory building",
+        "is_active": true
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+---
+
+### 5. Location (Public)
+
+#### List Provinces
+
+```bash
+curl -X GET 'http://localhost:8080/api/provinces?page=1&page_size=10&search=Aceh'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Provinces retrieved successfully",
+  "data": {
+    "items": [
+      { "id": 1, "name": "Aceh (NAD)", "code": "11" }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+#### List Regencies by Province
+
+```bash
+curl -X GET 'http://localhost:8080/api/regencies?province_id=1&page=1&page_size=10'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Regencies retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "type": "Kabupaten",
+        "name": "Aceh Barat",
+        "code": "05",
+        "full_code": "1105",
+        "province_id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+#### List Districts by Regency
+
+```bash
+curl -X GET 'http://localhost:8080/api/districts?regency_id=420&page=1&page_size=10'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Districts retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Air Majunto",
+        "code": "13",
+        "full_code": "170613",
+        "regency_id": 420
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+#### List Villages by District
+
+```bash
+curl -X GET 'http://localhost:8080/api/villages?district_id=7164&page=1&page_size=10&search=Yawosi'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Villages retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": 10,
+        "name": "Yawosi (Fanindi)",
+        "code": "2006",
+        "full_code": "9106132006",
+        "pos_code": "98552",
+        "district_id": 7164
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 1
+  }
+}
+```
+
+## �📤 API Response Format
 
 Semua endpoint menggunakan format response yang standar untuk memastikan konsistensi dan kemudahan integrasi.
 

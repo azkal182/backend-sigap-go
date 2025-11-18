@@ -14,9 +14,13 @@ func SetupRouter(
 	dormitoryHandler *handler.DormitoryHandler,
 	roleHandler *handler.RoleHandler,
 	locationHandler *handler.LocationHandler,
+	permissionHandler *handler.PermissionHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
+
+	// Global CORS middleware so all routes are covered
+	router.Use(middleware.NewCORSMiddlewareFromEnv())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -80,6 +84,12 @@ func SetupRouter(
 				roles.DELETE("/:id", authMiddleware.RequirePermission("role:delete"), roleHandler.DeleteRole)
 				roles.POST("/:id/permissions", authMiddleware.RequirePermission("role:update"), roleHandler.AssignPermission)
 				roles.DELETE("/:id/permissions", authMiddleware.RequirePermission("role:update"), roleHandler.RemovePermission)
+			}
+
+			// Permission routes (read-only)
+			permissions := protected.Group("/permissions")
+			{
+				permissions.GET("", authMiddleware.RequirePermission("role:read"), permissionHandler.ListPermissions)
 			}
 		}
 	}

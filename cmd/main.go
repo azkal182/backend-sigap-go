@@ -50,6 +50,7 @@ func main() {
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
+	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -57,12 +58,13 @@ func main() {
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
+	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
-	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, authMiddleware)
+	// Setup router (includes global CORS middleware inside SetupRouter)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, authMiddleware)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")
