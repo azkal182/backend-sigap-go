@@ -35,6 +35,144 @@ type testUserRepository struct {
 	db *gorm.DB
 }
 
+func seedFan(t *testing.T, db *gorm.DB) entity.Fan {
+	fan := entity.Fan{ID: uuid.New(), Name: "FAN Seed", Level: "junior", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	if err := db.Create(&fan).Error; err != nil {
+		t.Fatalf("failed to seed fan: %v", err)
+	}
+	return fan
+}
+
+func TestFanEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	user, token := createTestUser(t, db, "fan-admin", tokenService, "fans:read", "fans:create", "fans:update", "fans:delete")
+	assignPermissionsToUser(t, db, user.ID, []string{"fans:read", "fans:create", "fans:update", "fans:delete"})
+
+	// Create
+	createPayload := map[string]string{
+		"name":  "Integration FAN",
+		"level": "senior",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/fans", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.FanResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	fanID := createResp.Data.ID
+
+	// List
+	listReq := httptest.NewRequest(http.MethodGet, "/api/fans?page=1&page_size=10", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	// Get
+	getReq := httptest.NewRequest(http.MethodGet, "/api/fans/"+fanID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	// Update
+	updatePayload := map[string]string{"name": "Updated FAN"}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/fans/"+fanID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	// Delete
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/fans/"+fanID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
+func TestClassEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	user, token := createTestUser(t, db, "class-admin", tokenService, "classes:read", "classes:create", "classes:update", "classes:delete")
+	assignPermissionsToUser(t, db, user.ID, []string{"classes:read", "classes:create", "classes:update", "classes:delete"})
+	fan := seedFan(t, db)
+
+	// Create class
+	createPayload := map[string]interface{}{
+		"fan_id": fan.ID.String(),
+		"name":   "Integration Class",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/classes", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.ClassResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	classID := createResp.Data.ID
+
+	// List by fan
+	listReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/classes?fan_id=%s", fan.ID), nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	// Enroll student
+	student := entity.Student{ID: uuid.New(), StudentNumber: "ST-CL-1", FullName: "Class Student", Gender: "male", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	require.NoError(t, db.Create(&student).Error)
+	enrollPayload := map[string]string{
+		"student_id": student.ID.String(),
+		"start_date": time.Now().Format(time.RFC3339),
+	}
+	enrollBody, _ := json.Marshal(enrollPayload)
+	enrollReq := httptest.NewRequest(http.MethodPost, "/api/classes/"+classID+"/students", bytes.NewBuffer(enrollBody))
+	enrollReq.Header.Set("Authorization", "Bearer "+token)
+	enrollReq.Header.Set("Content-Type", "application/json")
+	enrollRes := httptest.NewRecorder()
+	router.ServeHTTP(enrollRes, enrollReq)
+	assert.Equal(t, http.StatusNoContent, enrollRes.Code)
+
+	// Assign staff
+	staffUser := entity.User{ID: uuid.New(), Username: "staff-class", Password: "hash", Name: "Staff", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	require.NoError(t, db.Create(&staffUser).Error)
+	assignPayload := map[string]string{
+		"user_id": staffUser.ID.String(),
+		"role":    "class_manager",
+	}
+	assignBody, _ := json.Marshal(assignPayload)
+	assignReq := httptest.NewRequest(http.MethodPost, "/api/classes/"+classID+"/staff", bytes.NewBuffer(assignBody))
+	assignReq.Header.Set("Authorization", "Bearer "+token)
+	assignReq.Header.Set("Content-Type", "application/json")
+	assignRes := httptest.NewRecorder()
+	router.ServeHTTP(assignRes, assignReq)
+	assert.Equal(t, http.StatusNoContent, assignRes.Code)
+
+	// Cleanup: delete class
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/classes/"+classID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
 func (r *testUserRepository) Create(ctx context.Context, user *entity.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
@@ -123,6 +261,10 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	roleRepo := infraRepo.NewRoleRepository() // These will use database.DB
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
 	studentRepo := infraRepo.NewStudentRepository()
+	fanRepo := infraRepo.NewFanRepository()
+	classRepo := infraRepo.NewClassRepository()
+	enrollmentRepo := infraRepo.NewStudentClassEnrollmentRepository()
+	classStaffRepo := infraRepo.NewClassStaffRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
@@ -139,6 +281,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
 	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
+	fanUseCase := usecase.NewFanUseCase(fanRepo, auditLogger)
+	classUseCase := usecase.NewClassUseCase(classRepo, fanRepo, studentRepo, enrollmentRepo, classStaffRepo, auditLogger)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -149,6 +293,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	userHandler := handler.NewUserHandler(userUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
 	studentHandler := handler.NewStudentHandler(studentUseCase)
+	fanHandler := handler.NewFanHandler(fanUseCase)
+	classHandler := handler.NewClassHandler(classUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
@@ -158,7 +304,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, studentHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, studentHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, fanHandler, classHandler, authMiddleware)
 
 	cleanup := func() {
 		database.DB = originalDB // Restore original DB
@@ -213,58 +359,27 @@ func createTestUser(t *testing.T, db *gorm.DB, username string, tokenService ser
 	return user, token
 }
 
-func assignDormitoryAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
-	var perm entity.Permission
-	if err := db.Where("name = ?", "dorm:update").First(&perm).Error; err != nil {
-		perm = entity.Permission{
-			ID:        uuid.New(),
-			Name:      "dorm:update",
-			Slug:      fmt.Sprintf("dorm-update-%d", time.Now().UnixNano()),
-			Resource:  "dorm",
-			Action:    "update",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-		if err := db.Create(&perm).Error; err != nil {
-			t.Fatalf("failed to create permission: %v", err)
-		}
-	}
-
-	role := entity.Role{
-		ID:        uuid.New(),
-		Name:      "admin",
-		Slug:      fmt.Sprintf("admin-%d", time.Now().UnixNano()),
-		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	if err := db.Create(&role).Error; err != nil {
-		t.Fatalf("failed to create role: %v", err)
-	}
-
-	rolePerm := entity.RolePermission{RoleID: role.ID, PermissionID: perm.ID}
-	if err := db.Create(&rolePerm).Error; err != nil {
-		t.Fatalf("failed to link role permission: %v", err)
-	}
-
-	userRole := entity.UserRole{UserID: userID, RoleID: role.ID}
-	if err := db.Create(&userRole).Error; err != nil {
-		t.Fatalf("failed to assign role to user: %v", err)
-	}
+func assignPermissionsToUser(t *testing.T, db *gorm.DB, userID uuid.UUID, permissionNames []string) {
+	assignRoleWithPermissions(t, db, userID, fmt.Sprintf("role-%s", uuid.New().String()), permissionNames)
 }
 
-func assignStudentAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
-	permNames := []string{"student:read", "student:create", "student:update"}
-	permissions := make([]entity.Permission, 0, len(permNames))
-	for _, name := range permNames {
+func assignRoleWithPermissions(t *testing.T, db *gorm.DB, userID uuid.UUID, roleName string, permissionNames []string) {
+	permissions := make([]entity.Permission, 0, len(permissionNames))
+	for _, name := range permissionNames {
 		var perm entity.Permission
 		if err := db.Where("name = ?", name).First(&perm).Error; err != nil {
+			parts := strings.Split(name, ":")
+			resource := parts[0]
+			action := ""
+			if len(parts) > 1 {
+				action = parts[1]
+			}
 			perm = entity.Permission{
 				ID:        uuid.New(),
 				Name:      name,
 				Slug:      fmt.Sprintf("%s-%d", strings.ReplaceAll(name, ":", "-"), time.Now().UnixNano()),
-				Resource:  "student",
-				Action:    strings.Split(name, ":")[1],
+				Resource:  resource,
+				Action:    action,
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
 			}
@@ -277,14 +392,14 @@ func assignStudentAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
 
 	role := entity.Role{
 		ID:        uuid.New(),
-		Name:      "student-admin",
-		Slug:      fmt.Sprintf("student-admin-%d", time.Now().UnixNano()),
+		Name:      roleName,
+		Slug:      fmt.Sprintf("%s-%d", roleName, time.Now().UnixNano()),
 		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 	if err := db.Create(&role).Error; err != nil {
-		t.Fatalf("failed to create student role: %v", err)
+		t.Fatalf("failed to create role: %v", err)
 	}
 
 	for _, perm := range permissions {
@@ -296,8 +411,16 @@ func assignStudentAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
 
 	userRole := entity.UserRole{UserID: userID, RoleID: role.ID}
 	if err := db.Create(&userRole).Error; err != nil {
-		t.Fatalf("failed to assign student role: %v", err)
+		t.Fatalf("failed to assign role to user: %v", err)
 	}
+}
+
+func assignDormitoryAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
+	assignRoleWithPermissions(t, db, userID, "admin", []string{"dorm:update"})
+}
+
+func assignStudentAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
+	assignRoleWithPermissions(t, db, userID, "student-admin", []string{"student:read", "student:create", "student:update"})
 }
 
 func TestAuthIntegration_RegisterAndLogin(t *testing.T) {

@@ -33,6 +33,14 @@ var (
 	ErrStudentNotFound      = errors.New("student not found")
 	ErrStudentAlreadyExists = errors.New("student already exists")
 
+	// Fan errors
+	ErrFanNotFound = errors.New("fan not found")
+
+	// Class errors
+	ErrClassNotFound          = errors.New("class not found")
+	ErrStudentAlreadyEnrolled = errors.New("student already enrolled in class")
+	ErrClassStaffExists       = errors.New("staff already assigned to class")
+
 	// General errors
 	ErrInternalServer = errors.New("internal server error")
 	ErrBadRequest     = errors.New("bad request")

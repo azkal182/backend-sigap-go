@@ -265,6 +265,22 @@ Server akan berjalan di `http://localhost:8080`
 ### Permissions (Protected)
 - `GET /api/permissions` - List permissions (with pagination, requires `role:read` permission)
 
+### FAN (Protected)
+- `GET /api/fans` - List FAN structures (requires `fans:read` permission)
+- `GET /api/fans/:id` - Get FAN detail (requires `fans:read` permission)
+- `POST /api/fans` - Create FAN (requires `fans:create` permission)
+- `PUT /api/fans/:id` - Update FAN (requires `fans:update` permission)
+- `DELETE /api/fans/:id` - Delete FAN (requires `fans:delete` permission)
+
+### Classes (Protected)
+- `GET /api/classes?fan_id=...` - List classes filtered by FAN (requires `classes:read` permission)
+- `GET /api/classes/:id` - Get class detail (requires `classes:read` permission)
+- `POST /api/classes` - Create class within a FAN (requires `classes:create` permission)
+- `PUT /api/classes/:id` - Update class (requires `classes:update` permission)
+- `DELETE /api/classes/:id` - Delete class (requires `classes:delete` permission)
+- `POST /api/classes/:id/students` - Enroll student in a class (requires `classes:update` permission)
+- `POST /api/classes/:id/staff` - Assign staff to class (requires `classes:update` permission)
+
 ### Audit Logs (Protected)
 - `GET /api/audit-logs` - List audit logs (with pagination and filters, requires `audit:read` permission)
 - `DELETE /api/dormitories/:id` - Delete dormitory (requires dormitory access + `dorm:delete` permission)

@@ -266,4 +266,31 @@ func init() {
 			return db.Migrator().DropTable(&entity.Student{})
 		},
 	)
+
+	// Migration 008: Create fans and classes related tables
+	RegisterMigration(
+		"008_create_fans_and_classes",
+		"Create fans, classes, student_class_enrollments, and class_staff tables",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.Fan{},
+				&entity.Class{},
+				&entity.StudentClassEnrollment{},
+				&entity.ClassStaff{},
+			)
+		},
+		func(db *gorm.DB) error {
+			// Drop in reverse dependency order
+			if err := db.Migrator().DropTable(&entity.ClassStaff{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.StudentClassEnrollment{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.Class{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&entity.Fan{})
+		},
+	)
 }

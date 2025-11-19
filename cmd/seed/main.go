@@ -55,6 +55,16 @@ func main() {
 		{ID: uuid.New(), Name: "student:read", Slug: "student-read", Resource: "student", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "student:create", Slug: "student-create", Resource: "student", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "student:update", Slug: "student-update", Resource: "student", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Fan permissions
+		{ID: uuid.New(), Name: "fans:read", Slug: "fans-read", Resource: "fans", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "fans:create", Slug: "fans-create", Resource: "fans", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "fans:update", Slug: "fans-update", Resource: "fans", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "fans:delete", Slug: "fans-delete", Resource: "fans", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Class permissions
+		{ID: uuid.New(), Name: "classes:read", Slug: "classes-read", Resource: "classes", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "classes:create", Slug: "classes-create", Resource: "classes", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "classes:update", Slug: "classes-update", Resource: "classes", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "classes:delete", Slug: "classes-delete", Resource: "classes", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -139,6 +149,8 @@ func main() {
 				*permissions[4], *permissions[5], *permissions[6], *permissions[7], // dorm:*
 				*permissions[8], *permissions[9], *permissions[10], *permissions[11], // role:*
 				*permissions[12], *permissions[13], *permissions[14], // student:*
+				*permissions[15], *permissions[16], *permissions[17], *permissions[18], // fans:*
+				*permissions[19], *permissions[20], *permissions[21], *permissions[22], // classes:*
 			},
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {

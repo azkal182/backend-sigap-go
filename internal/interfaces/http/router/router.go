@@ -17,6 +17,8 @@ func SetupRouter(
 	locationHandler *handler.LocationHandler,
 	permissionHandler *handler.PermissionHandler,
 	auditLogHandler *handler.AuditLogHandler,
+	fanHandler *handler.FanHandler,
+	classHandler *handler.ClassHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -116,6 +118,28 @@ func SetupRouter(
 			permissions := protected.Group("/permissions")
 			{
 				permissions.GET("", authMiddleware.RequirePermission("role:read"), permissionHandler.ListPermissions)
+			}
+
+			// Fan routes
+			fans := protected.Group("/fans")
+			{
+				fans.GET("", authMiddleware.RequirePermission("fans:read"), fanHandler.ListFans)
+				fans.GET(":id", authMiddleware.RequirePermission("fans:read"), fanHandler.GetFan)
+				fans.POST("", authMiddleware.RequirePermission("fans:create"), fanHandler.CreateFan)
+				fans.PUT(":id", authMiddleware.RequirePermission("fans:update"), fanHandler.UpdateFan)
+				fans.DELETE(":id", authMiddleware.RequirePermission("fans:delete"), fanHandler.DeleteFan)
+			}
+
+			// Class routes
+			classes := protected.Group("/classes")
+			{
+				classes.GET("", authMiddleware.RequirePermission("classes:read"), classHandler.ListClasses)
+				classes.GET(":id", authMiddleware.RequirePermission("classes:read"), classHandler.GetClass)
+				classes.POST("", authMiddleware.RequirePermission("classes:create"), classHandler.CreateClass)
+				classes.PUT(":id", authMiddleware.RequirePermission("classes:update"), classHandler.UpdateClass)
+				classes.DELETE(":id", authMiddleware.RequirePermission("classes:delete"), classHandler.DeleteClass)
+				classes.POST(":id/students", authMiddleware.RequirePermission("classes:update"), classHandler.EnrollStudent)
+				classes.POST(":id/staff", authMiddleware.RequirePermission("classes:update"), classHandler.AssignStaff)
 			}
 		}
 	}
