@@ -320,6 +320,108 @@ curl -X POST http://localhost:8080/api/auth/register \
 }
 ```
 
+---
+
+### 5. Students
+
+#### Create Student
+
+```bash
+curl -X POST http://localhost:8080/api/students \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "student_number": "STD001",
+    "full_name": "Integration Student",
+    "birth_date": "2010-01-01T00:00:00Z",
+    "gender": "male",
+    "parent_name": "Parent Doe"
+  }'
+```
+
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "message": "Student created successfully",
+  "data": {
+    "id": "uuid",
+    "student_number": "STD001",
+    "full_name": "Integration Student",
+    "birth_date": "2010-01-01T00:00:00Z",
+    "gender": "male",
+    "parent_name": "Parent Doe",
+    "status": "active",
+    "is_active": true,
+    "created_at": "2025-11-19T02:56:53Z",
+    "updated_at": "2025-11-19T02:56:53Z",
+    "dormitory_history": []
+  }
+}
+```
+
+#### Patch Student Status
+
+```bash
+curl -X PATCH http://localhost:8080/api/students/<STUDENT_ID>/status \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "leave"
+  }'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Student status updated successfully",
+  "data": {
+    "id": "uuid",
+    "student_number": "STD001",
+    "status": "leave",
+    "is_active": false,
+    "updated_at": "2025-11-19T03:05:00Z",
+    "dormitory_history": []
+  }
+}
+```
+
+#### Mutate Dormitory
+
+```bash
+curl -X POST http://localhost:8080/api/students/<STUDENT_ID>/mutate-dormitory \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dormitory_id": "<DORMITORY_ID>",
+    "start_date": "2025-11-19T03:10:00Z"
+  }'
+```
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "message": "Student dormitory mutated successfully",
+  "data": {
+    "id": "uuid",
+    "student_number": "STD001",
+    "status": "leave",
+    "dormitory_history": [
+      {
+        "dormitory_id": "<DORMITORY_ID>",
+        "start_date": "2025-11-19T03:10:00Z",
+        "end_date": ""
+      }
+    ]
+  }
+}
+```
+
 #### Get Current User
 
 ```bash
