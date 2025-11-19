@@ -37,6 +37,9 @@ func (uc *DormitoryUseCase) CreateDormitory(ctx context.Context, req dto.CreateD
 	dormitory := &entity.Dormitory{
 		ID:          uuid.New(),
 		Name:        req.Name,
+		Gender:      req.Gender,
+		Level:       req.Level,
+		Code:        req.Code,
 		Description: req.Description,
 		IsActive:    true,
 		CreatedAt:   time.Now(),
@@ -75,6 +78,15 @@ func (uc *DormitoryUseCase) UpdateDormitory(ctx context.Context, id uuid.UUID, r
 
 	if req.Name != "" {
 		dormitory.Name = req.Name
+	}
+	if req.Gender != nil {
+		dormitory.Gender = *req.Gender
+	}
+	if req.Level != nil {
+		dormitory.Level = *req.Level
+	}
+	if req.Code != nil {
+		dormitory.Code = *req.Code
 	}
 	if req.Description != "" {
 		dormitory.Description = req.Description
@@ -161,9 +173,54 @@ func (uc *DormitoryUseCase) toDormitoryResponse(dormitory *entity.Dormitory) *dt
 	return &dto.DormitoryResponse{
 		ID:          dormitory.ID.String(),
 		Name:        dormitory.Name,
+		Gender:      dormitory.Gender,
+		Level:       dormitory.Level,
+		Code:        dormitory.Code,
 		Description: dormitory.Description,
 		IsActive:    dormitory.IsActive,
 		CreatedAt:   dormitory.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   dormitory.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+// AssignUser assigns a staff/user to a dormitory
+func (uc *DormitoryUseCase) AssignUser(ctx context.Context, dormitoryID, userID uuid.UUID) error {
+	if _, err := uc.dormitoryRepo.GetByID(ctx, dormitoryID); err != nil {
+		return domainErrors.ErrDormitoryNotFound
+	}
+
+	if _, err := uc.userRepo.GetByID(ctx, userID); err != nil {
+		return domainErrors.ErrUserNotFound
+	}
+
+	if err := uc.dormitoryRepo.AssignToUser(ctx, userID, dormitoryID); err != nil {
+		return err
+	}
+
+	_ = uc.auditLogger.Log(ctx, "dormitory", "dorm:assign-user", dormitoryID.String(), map[string]string{
+		"user_id": userID.String(),
+	})
+
+	return nil
+}
+
+// RemoveUser removes staff/user from a dormitory
+func (uc *DormitoryUseCase) RemoveUser(ctx context.Context, dormitoryID, userID uuid.UUID) error {
+	if _, err := uc.dormitoryRepo.GetByID(ctx, dormitoryID); err != nil {
+		return domainErrors.ErrDormitoryNotFound
+	}
+
+	if _, err := uc.userRepo.GetByID(ctx, userID); err != nil {
+		return domainErrors.ErrUserNotFound
+	}
+
+	if err := uc.dormitoryRepo.RemoveFromUser(ctx, userID, dormitoryID); err != nil {
+		return err
+	}
+
+	_ = uc.auditLogger.Log(ctx, "dormitory", "dorm:remove-user", dormitoryID.String(), map[string]string{
+		"user_id": userID.String(),
+	})
+
+	return nil
 }

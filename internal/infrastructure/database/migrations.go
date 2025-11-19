@@ -248,4 +248,22 @@ func init() {
 			return db.Migrator().DropTable(&entity.AuditLog{})
 		},
 	)
+
+	// Migration 007: Create students and student_dormitory_history tables
+	RegisterMigration(
+		"007_create_students",
+		"Create students and student dormitory history tables",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.Student{},
+				&entity.StudentDormitoryHistory{},
+			)
+		},
+		func(db *gorm.DB) error {
+			if err := db.Migrator().DropTable(&entity.StudentDormitoryHistory{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&entity.Student{})
+		},
+	)
 }

@@ -12,6 +12,7 @@ func SetupRouter(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
 	dormitoryHandler *handler.DormitoryHandler,
+	studentHandler *handler.StudentHandler,
 	roleHandler *handler.RoleHandler,
 	locationHandler *handler.LocationHandler,
 	permissionHandler *handler.PermissionHandler,
@@ -64,6 +65,17 @@ func SetupRouter(
 				auditLogs.GET("", authMiddleware.RequirePermission("audit:read"), auditLogHandler.ListAuditLogs)
 			}
 
+			// Student routes
+			students := protected.Group("/students")
+			{
+				students.GET("", authMiddleware.RequirePermission("student:read"), studentHandler.ListStudents)
+				students.GET("/:id", authMiddleware.RequirePermission("student:read"), studentHandler.GetStudent)
+				students.POST("", authMiddleware.RequirePermission("student:create"), studentHandler.CreateStudent)
+				students.PUT("/:id", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudent)
+				students.PATCH("/:id/status", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudentStatus)
+				students.POST("/:id/mutate-dormitory", authMiddleware.RequirePermission("student:update"), studentHandler.MutateStudentDormitory)
+			}
+
 			// User routes
 			users := protected.Group("/users")
 			{
@@ -84,6 +96,8 @@ func SetupRouter(
 				dormitories.POST("", authMiddleware.RequirePermission("dorm:create"), dormitoryHandler.CreateDormitory)
 				dormitories.PUT("/:id", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:update"), dormitoryHandler.UpdateDormitory)
 				dormitories.DELETE("/:id", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:delete"), dormitoryHandler.DeleteDormitory)
+				dormitories.POST("/:id/users", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:update"), dormitoryHandler.AssignDormitoryUser)
+				dormitories.DELETE("/:id/users/:user_id", authMiddleware.RequireDormitoryAccess(), authMiddleware.RequirePermission("dorm:update"), dormitoryHandler.RemoveDormitoryUser)
 			}
 
 			// Role routes

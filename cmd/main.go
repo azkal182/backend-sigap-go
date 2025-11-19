@@ -37,6 +37,7 @@ func main() {
 	roleRepo := infraRepo.NewRoleRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
 	dormitoryRepo := infraRepo.NewDormitoryRepository()
+	studentRepo := infraRepo.NewStudentRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
 	regencyRepo := infraRepo.NewRegencyRepository()
@@ -52,6 +53,7 @@ func main() {
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
+	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -61,6 +63,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	dormitoryHandler := handler.NewDormitoryHandler(dormitoryUseCase)
+	studentHandler := handler.NewStudentHandler(studentUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
@@ -69,7 +72,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router (includes global CORS & audit context middleware inside SetupRouter)
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, authMiddleware)
+	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, studentHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, authMiddleware)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

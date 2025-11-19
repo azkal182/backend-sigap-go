@@ -24,11 +24,14 @@ func TestDormitoryUseCase_CreateDormitory(t *testing.T) {
 			name: "success - create dormitory",
 			req: dto.CreateDormitoryRequest{
 				Name:        "Test Dormitory",
+				Gender:      "male",
+				Level:       "senior",
+				Code:        "DRM01",
 				Description: "A test dormitory",
 			},
 			setupMocks: func(dormRepo *mocks.MockDormitoryRepository) {
 				dormRepo.On("Create", mock.Anything, mock.MatchedBy(func(d *entity.Dormitory) bool {
-					return d.Name == "Test Dormitory" && d.Description == "A test dormitory"
+					return d.Name == "Test Dormitory" && d.Description == "A test dormitory" && d.Gender == "male" && d.Level == "senior" && d.Code == "DRM01"
 				})).Return(nil)
 			},
 			expectedError: nil,
@@ -58,6 +61,49 @@ func TestDormitoryUseCase_CreateDormitory(t *testing.T) {
 			dormRepo.AssertExpectations(t)
 		})
 	}
+}
+
+func TestDormitoryUseCase_AssignAndRemoveUser(t *testing.T) {
+	dormitoryID := uuid.New()
+	userID := uuid.New()
+
+	t.Run("assign user success", func(t *testing.T) {
+		dormRepo := new(mocks.MockDormitoryRepository)
+		userRepo := new(mocks.MockUserRepository)
+
+		dormRepo.On("GetByID", mock.Anything, dormitoryID).Return(&entity.Dormitory{ID: dormitoryID}, nil)
+		userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+		dormRepo.On("AssignToUser", mock.Anything, userID, dormitoryID).Return(nil)
+
+		auditLogger := &noopAuditLogger{}
+		dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
+
+		err := dormUseCase.AssignUser(context.Background(), dormitoryID, userID)
+		assert.NoError(t, err)
+		dormRepo.AssertExpectations(t)
+		userRepo.AssertExpectations(t)
+	})
+
+	t.Run("remove user success", func(t *testing.T) {
+		dormRepo := new(mocks.MockDormitoryRepository)
+		userRepo := new(mocks.MockUserRepository)
+
+		dormRepo.On("GetByID", mock.Anything, dormitoryID).Return(&entity.Dormitory{ID: dormitoryID}, nil)
+		userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+		dormRepo.On("RemoveFromUser", mock.Anything, userID, dormitoryID).Return(nil)
+
+		auditLogger := &noopAuditLogger{}
+		dormUseCase := NewDormitoryUseCase(dormRepo, userRepo, auditLogger)
+
+		err := dormUseCase.RemoveUser(context.Background(), dormitoryID, userID)
+		assert.NoError(t, err)
+		dormRepo.AssertExpectations(t)
+		userRepo.AssertExpectations(t)
+	})
+}
+
+func strPtr(val string) *string {
+	return &val
 }
 
 func TestDormitoryUseCase_GetDormitoryByID(t *testing.T) {
@@ -128,15 +174,21 @@ func TestDormitoryUseCase_UpdateDormitory(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name:        "success - update dormitory name",
+			name:        "success - update dormitory fields",
 			dormitoryID: dormitoryID,
 			req: dto.UpdateDormitoryRequest{
-				Name: "Updated Name",
+				Name:   "Updated Name",
+				Code:   strPtr("NEWCODE"),
+				Level:  strPtr("junior"),
+				Gender: strPtr("female"),
 			},
 			setupMocks: func(dormRepo *mocks.MockDormitoryRepository) {
 				dormRepo.On("GetByID", mock.Anything, dormitoryID).Return(&entity.Dormitory{
-					ID:   dormitoryID,
-					Name: "Old Name",
+					ID:     dormitoryID,
+					Name:   "Old Name",
+					Code:   "OLDCODE",
+					Level:  "senior",
+					Gender: "male",
 				}, nil)
 				dormRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},

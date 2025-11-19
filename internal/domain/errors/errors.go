@@ -29,6 +29,10 @@ var (
 	ErrDormitoryAlreadyExists = errors.New("dormitory already exists")
 	ErrDormitoryAccessDenied  = errors.New("access denied to this dormitory")
 
+	// Student errors
+	ErrStudentNotFound      = errors.New("student not found")
+	ErrStudentAlreadyExists = errors.New("student already exists")
+
 	// General errors
 	ErrInternalServer = errors.New("internal server error")
 	ErrBadRequest     = errors.New("bad request")

@@ -29,10 +29,17 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 - ✅ Default role "user" untuk user baru
 
 ### 4. Dormitory Management (CRUD Dormitory)
-- ✅ CRUD untuk data dormitory
+- ✅ CRUD untuk data dormitory (dengan atribut `name`, `gender`, `level`, `code`, status aktif)
+- ✅ Assign/Remove staff ke dormitory via endpoint khusus
 - ✅ Setiap dormitory dapat dibatasi akses berdasarkan guard
 
-### 5. Guard / Access Control
+### 5. Student Management (CRUD Students)
+- ✅ CRUD santri dengan atribut `student_number`, `full_name`, `birth_date`, `gender`, `parent_name`, status aktif
+- ✅ Patch status (`active`, `inactive`, `leave`, `graduated`) via endpoint khusus
+- ✅ Mutasi asrama (riwayat `student_dormitory_history`) dengan audit logging
+- ✅ Endpoint terproteksi permission `student:*`
+
+### 6. Guard / Access Control
 - ✅ Guard menentukan batas akses user terhadap dormitory:
   - **Access to specific dormitories only** — staff hanya dapat mengelola dormitory tertentu
   - **Access to all dormitories** — admin dapat mengelola seluruh dormitory
@@ -260,12 +267,17 @@ Server akan berjalan di `http://localhost:8080`
 
 ### Audit Logs (Protected)
 - `GET /api/audit-logs` - List audit logs (with pagination and filters, requires `audit:read` permission)
-### Dormitories (Protected)
-- `GET /api/dormitories` - List dormitories (with pagination)
-- `GET /api/dormitories/:id` - Get dormitory by ID (requires dormitory access)
-- `POST /api/dormitories` - Create dormitory (requires `dorm:create` permission)
-- `PUT /api/dormitories/:id` - Update dormitory (requires dormitory access + `dorm:update` permission)
 - `DELETE /api/dormitories/:id` - Delete dormitory (requires dormitory access + `dorm:delete` permission)
+- `POST /api/dormitories/:id/users` - Assign staff/user to dormitory (requires dormitory access + `dorm:update` permission)
+- `DELETE /api/dormitories/:id/users/:user_id` - Remove staff/user assignment (requires dormitory access + `dorm:update` permission)
+
+### Students (Protected)
+- `GET /api/students` - List students (requires `student:read`)
+- `GET /api/students/:id` - Get student detail (requires `student:read`)
+- `POST /api/students` - Create student (requires `student:create`)
+- `PUT /api/students/:id` - Update student (requires `student:update`)
+- `PATCH /api/students/:id/status` - Update lifecycle status (requires `student:update`)
+- `POST /api/students/:id/mutate-dormitory` - Mutate dormitory assignment and log history (requires `student:update`)
 
 ### Health Check
 - `GET /health` - Health check endpoint
@@ -898,6 +910,9 @@ make test
 
 # Or
 go test ./...
+
+# Run HTTP integration tests (includes dormitory & student flows)
+go test ./internal/interfaces/http
 ```
 
 ## 📦 Build

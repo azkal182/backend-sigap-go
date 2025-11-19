@@ -187,3 +187,93 @@ func (h *DormitoryHandler) ListDormitories(c *gin.Context) {
 
 	response.SuccessOK(c, resp, "Dormitories retrieved successfully")
 }
+
+// AssignDormitoryUser handles assigning a user to a dormitory
+// @Summary Assign user to dormitory
+// @Description Assign a staff/user to a dormitory
+// @Tags dormitories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Dormitory ID"
+// @Param request body dto.AssignDormitoryUserRequest true "Assign user request"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/dormitories/{id}/users [post]
+func (h *DormitoryHandler) AssignDormitoryUser(c *gin.Context) {
+	dormID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
+		return
+	}
+
+	var req dto.AssignDormitoryUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorValidation(c, err)
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
+		return
+	}
+
+	if err := h.dormitoryUseCase.AssignUser(c.Request.Context(), dormID, userID); err != nil {
+		switch err {
+		case domainErrors.ErrDormitoryNotFound:
+			response.ErrorNotFound(c, "Dormitory not found")
+		case domainErrors.ErrUserNotFound:
+			response.ErrorNotFound(c, "User not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to assign user", err.Error())
+		}
+		return
+	}
+
+	response.SuccessNoContent(c)
+}
+
+// RemoveDormitoryUser handles removing a user from a dormitory
+// @Summary Remove user from dormitory
+// @Description Remove a staff/user assignment from a dormitory
+// @Tags dormitories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Dormitory ID"
+// @Param user_id path string true "User ID"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/dormitories/{id}/users/{user_id} [delete]
+func (h *DormitoryHandler) RemoveDormitoryUser(c *gin.Context) {
+	dormID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
+		return
+	}
+
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid user ID", err.Error())
+		return
+	}
+
+	if err := h.dormitoryUseCase.RemoveUser(c.Request.Context(), dormID, userID); err != nil {
+		switch err {
+		case domainErrors.ErrDormitoryNotFound:
+			response.ErrorNotFound(c, "Dormitory not found")
+		case domainErrors.ErrUserNotFound:
+			response.ErrorNotFound(c, "User not found")
+		default:
+			response.ErrorInternalServer(c, "Failed to remove user", err.Error())
+		}
+		return
+	}
+
+	response.SuccessNoContent(c)
+}

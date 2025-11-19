@@ -38,3 +38,5 @@ dist/
 # Database
 *.db
 *.sqlite
+
+main

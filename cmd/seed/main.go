@@ -51,6 +51,10 @@ func main() {
 		{ID: uuid.New(), Name: "role:delete", Slug: "role-delete", Resource: "role", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		// Audit permissions
 		{ID: uuid.New(), Name: "audit:read", Slug: "audit-read", Resource: "audit_log", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Student permissions
+		{ID: uuid.New(), Name: "student:read", Slug: "student-read", Resource: "student", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "student:create", Slug: "student-create", Resource: "student", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "student:update", Slug: "student-update", Resource: "student", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -134,6 +138,7 @@ func main() {
 				*permissions[0], *permissions[1], *permissions[2], *permissions[3], // user:*
 				*permissions[4], *permissions[5], *permissions[6], *permissions[7], // dorm:*
 				*permissions[8], *permissions[9], *permissions[10], *permissions[11], // role:*
+				*permissions[12], *permissions[13], *permissions[14], // student:*
 			},
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {
@@ -165,6 +170,7 @@ func main() {
 				*permissions[0], *permissions[1], *permissions[2], *permissions[3], // user:*
 				*permissions[4], *permissions[5], *permissions[6], *permissions[7], // dorm:*
 				*permissions[8], *permissions[9], *permissions[10], *permissions[11], // role:*
+				*permissions[12], *permissions[13], *permissions[14], // student:*
 			},
 		}
 		if err := roleRepo.Create(ctx, superAdminRole); err != nil {
@@ -250,6 +256,9 @@ func main() {
 		{
 			ID:          uuid.New(),
 			Name:        "Dormitory A",
+			Gender:      "male",
+			Level:       "senior",
+			Code:        "DORMA",
 			Description: "Main dormitory building",
 			IsActive:    true,
 			CreatedAt:   time.Now(),
@@ -258,6 +267,9 @@ func main() {
 		{
 			ID:          uuid.New(),
 			Name:        "Dormitory B",
+			Gender:      "female",
+			Level:       "junior",
+			Code:        "DORMB",
 			Description: "Secondary dormitory building",
 			IsActive:    true,
 			CreatedAt:   time.Now(),
