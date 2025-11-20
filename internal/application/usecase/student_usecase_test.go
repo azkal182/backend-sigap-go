@@ -74,6 +74,16 @@ func TestStudentUseCase_UpdateStudent(t *testing.T) {
 		assert.ErrorIs(t, err, domainErrors.ErrStudentNotFound)
 		assert.Nil(t, resp)
 	})
+
+	t.Run("mutate failure", func(t *testing.T) {
+		repo := new(mocks.MockStudentRepository)
+		repo.On("GetByID", mock.Anything, studentID).Return(&entity.Student{ID: studentID}, nil)
+		repo.On("Update", mock.Anything, mock.Anything).Return(assert.AnError)
+		uc := NewStudentUseCase(repo, dormRepo, &noopAuditLogger{})
+		resp, err := uc.UpdateStudent(ctx, studentID, req)
+		assert.ErrorIs(t, err, domainErrors.ErrInternalServer)
+		assert.Nil(t, resp)
+	})
 }
 
 func TestStudentUseCase_UpdateStudentStatus(t *testing.T) {
@@ -92,6 +102,16 @@ func TestStudentUseCase_UpdateStudentStatus(t *testing.T) {
 	assert.Equal(t, entity.StudentStatusActive, resp.Status)
 	assert.True(t, resp.IsActive)
 	studentRepo.AssertExpectations(t)
+
+	t.Run("update status fails", func(t *testing.T) {
+		repo := new(mocks.MockStudentRepository)
+		repo.On("GetByID", mock.Anything, studentID).Return(&entity.Student{ID: studentID}, nil)
+		repo.On("UpdateStatus", mock.Anything, studentID, entity.StudentStatusInactive, false).Return(assert.AnError)
+		ucErr := NewStudentUseCase(repo, dormRepo, &noopAuditLogger{})
+		resp, err := ucErr.UpdateStudentStatus(ctx, studentID, entity.StudentStatusInactive)
+		assert.ErrorIs(t, err, domainErrors.ErrInternalServer)
+		assert.Nil(t, resp)
+	})
 }
 
 func TestStudentUseCase_GetStudentByID(t *testing.T) {
@@ -125,6 +145,15 @@ func TestStudentUseCase_ListStudents(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), resp.Total)
 	studentRepo.AssertExpectations(t)
+
+	t.Run("repo error", func(t *testing.T) {
+		repo := new(mocks.MockStudentRepository)
+		repo.On("List", mock.Anything, 10, 0).Return(nil, int64(0), assert.AnError)
+		ucErr := NewStudentUseCase(repo, dormRepo, &noopAuditLogger{})
+		resp, err := ucErr.ListStudents(ctx, 1, 10)
+		assert.ErrorIs(t, err, domainErrors.ErrInternalServer)
+		assert.Nil(t, resp)
+	})
 }
 
 func TestStudentUseCase_MutateStudentDormitory(t *testing.T) {
