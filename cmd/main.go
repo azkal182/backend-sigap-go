@@ -42,6 +42,12 @@ func main() {
 	classRepo := infraRepo.NewClassRepository()
 	enrollmentRepo := infraRepo.NewStudentClassEnrollmentRepository()
 	classStaffRepo := infraRepo.NewClassStaffRepository()
+	teacherRepo := infraRepo.NewTeacherRepository()
+	subjectRepo := infraRepo.NewSubjectRepository()
+	classScheduleRepo := infraRepo.NewClassScheduleRepository()
+	sksDefinitionRepo := infraRepo.NewSKSDefinitionRepository()
+	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
+	scheduleSlotRepo := infraRepo.NewScheduleSlotRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
 	regencyRepo := infraRepo.NewRegencyRepository()
@@ -60,6 +66,11 @@ func main() {
 	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
 	fanUseCase := usecase.NewFanUseCase(fanRepo, auditLogger)
 	classUseCase := usecase.NewClassUseCase(classRepo, fanRepo, studentRepo, enrollmentRepo, classStaffRepo, auditLogger)
+	teacherUseCase := usecase.NewTeacherUseCase(teacherRepo, userRepo, roleRepo, auditLogger)
+	scheduleSlotUseCase := usecase.NewScheduleSlotUseCase(scheduleSlotRepo, dormitoryRepo, auditLogger)
+	classScheduleUseCase := usecase.NewClassScheduleUseCase(classScheduleRepo, classRepo, teacherRepo, subjectRepo, scheduleSlotRepo, dormitoryRepo, auditLogger)
+	sksDefinitionUseCase := usecase.NewSKSDefinitionUseCase(sksDefinitionRepo, fanRepo, subjectRepo, auditLogger)
+	sksExamUseCase := usecase.NewSKSExamScheduleUseCase(sksExamRepo, sksDefinitionRepo, teacherRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -72,6 +83,11 @@ func main() {
 	studentHandler := handler.NewStudentHandler(studentUseCase)
 	fanHandler := handler.NewFanHandler(fanUseCase)
 	classHandler := handler.NewClassHandler(classUseCase)
+	teacherHandler := handler.NewTeacherHandler(teacherUseCase)
+	scheduleSlotHandler := handler.NewScheduleSlotHandler(scheduleSlotUseCase)
+	classScheduleHandler := handler.NewClassScheduleHandler(classScheduleUseCase)
+	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
+	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
@@ -80,7 +96,24 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router (includes global CORS & audit context middleware inside SetupRouter)
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, studentHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, fanHandler, classHandler, authMiddleware)
+	r := router.SetupRouter(
+		authHandler,
+		userHandler,
+		dormitoryHandler,
+		studentHandler,
+		roleHandler,
+		locationHandler,
+		permissionHandler,
+		auditLogHandler,
+		fanHandler,
+		classHandler,
+		teacherHandler,
+		classScheduleHandler,
+		sksDefinitionHandler,
+		sksExamHandler,
+		scheduleSlotHandler,
+		authMiddleware,
+	)
 
 	// Get server port
 	port := os.Getenv("SERVER_PORT")

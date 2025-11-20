@@ -65,6 +65,31 @@ func main() {
 		{ID: uuid.New(), Name: "classes:create", Slug: "classes-create", Resource: "classes", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "classes:update", Slug: "classes-update", Resource: "classes", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "classes:delete", Slug: "classes-delete", Resource: "classes", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Teacher permissions
+		{ID: uuid.New(), Name: "teachers:read", Slug: "teachers-read", Resource: "teachers", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "teachers:create", Slug: "teachers-create", Resource: "teachers", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "teachers:update", Slug: "teachers-update", Resource: "teachers", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "teachers:delete", Slug: "teachers-delete", Resource: "teachers", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Schedule slot permissions
+		{ID: uuid.New(), Name: "schedule_slots:read", Slug: "schedule-slots-read", Resource: "schedule_slots", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "schedule_slots:create", Slug: "schedule-slots-create", Resource: "schedule_slots", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "schedule_slots:update", Slug: "schedule-slots-update", Resource: "schedule_slots", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "schedule_slots:delete", Slug: "schedule-slots-delete", Resource: "schedule_slots", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Class schedule permissions
+		{ID: uuid.New(), Name: "class_schedules:read", Slug: "class-schedules-read", Resource: "class_schedules", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "class_schedules:create", Slug: "class-schedules-create", Resource: "class_schedules", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "class_schedules:update", Slug: "class-schedules-update", Resource: "class_schedules", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "class_schedules:delete", Slug: "class-schedules-delete", Resource: "class_schedules", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// SKS definition permissions
+		{ID: uuid.New(), Name: "sks_definitions:read", Slug: "sks-definitions-read", Resource: "sks_definitions", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_definitions:create", Slug: "sks-definitions-create", Resource: "sks_definitions", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_definitions:update", Slug: "sks-definitions-update", Resource: "sks_definitions", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_definitions:delete", Slug: "sks-definitions-delete", Resource: "sks_definitions", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// SKS exam schedule permissions
+		{ID: uuid.New(), Name: "sks_exams:read", Slug: "sks-exams-read", Resource: "sks_exams", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_exams:create", Slug: "sks-exams-create", Resource: "sks_exams", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_exams:update", Slug: "sks-exams-update", Resource: "sks_exams", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "sks_exams:delete", Slug: "sks-exams-delete", Resource: "sks_exams", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -134,6 +159,34 @@ func main() {
 		}
 	}
 
+	// Teacher Role (assign teacher permissions, not protected)
+	teacherPerms := []*entity.Permission{permissions[23], permissions[24], permissions[25], permissions[26]}
+	teacherRole, _ := roleRepo.GetBySlug(ctx, "teacher")
+	if teacherRole == nil {
+		teacherRoleEntity := &entity.Role{
+			ID:          uuid.New(),
+			Name:        "Teacher",
+			Slug:        "teacher",
+			IsActive:    true,
+			IsProtected: false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Permissions: []entity.Permission{
+				*teacherPerms[0], *teacherPerms[1], *teacherPerms[2], *teacherPerms[3],
+			},
+		}
+		if err := roleRepo.Create(ctx, teacherRoleEntity); err != nil {
+			log.Printf("Failed to create teacher role: %v", err)
+		} else {
+			log.Println("Created teacher role")
+		}
+	} else {
+		for _, perm := range teacherPerms {
+			roleRepo.AssignPermission(ctx, teacherRole.ID, perm.ID)
+		}
+		log.Println("Updated teacher role permissions")
+	}
+
 	// Admin Role (protected)
 	if !adminRoleExists {
 		adminRole := &entity.Role{
@@ -151,6 +204,11 @@ func main() {
 				*permissions[12], *permissions[13], *permissions[14], // student:*
 				*permissions[15], *permissions[16], *permissions[17], *permissions[18], // fans:*
 				*permissions[19], *permissions[20], *permissions[21], *permissions[22], // classes:*
+				*permissions[23], *permissions[24], *permissions[25], *permissions[26], // teachers:*
+				*permissions[27], *permissions[28], *permissions[29], *permissions[30], // schedule slots:*
+				*permissions[31], *permissions[32], *permissions[33], *permissions[34], // class schedules:*
+				*permissions[35], *permissions[36], *permissions[37], *permissions[38], // sks definitions:*
+				*permissions[39], *permissions[40], *permissions[41], *permissions[42], // sks exams:*
 			},
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {

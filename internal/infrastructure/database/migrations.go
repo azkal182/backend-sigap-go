@@ -293,4 +293,49 @@ func init() {
 			return db.Migrator().DropTable(&entity.Fan{})
 		},
 	)
+
+	// Migration 009: Create teachers table
+	RegisterMigration(
+		"009_create_teachers",
+		"Create teachers table for instructor records",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(&entity.Teacher{})
+		},
+		func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&entity.Teacher{})
+		},
+	)
+
+	// Migration 010: Create schedule_slots table
+	RegisterMigration(
+		"010_create_schedule_slots",
+		"Create schedule_slots table for dormitory time slots",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(&entity.ScheduleSlot{})
+		},
+		func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&entity.ScheduleSlot{})
+		},
+	)
+
+	RegisterMigration(
+		"011_create_subjects_class_sks",
+		"Create subjects, class_schedules, sks_definitions, and sks_exam_schedules tables",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.Subject{},
+				&entity.ClassSchedule{},
+				&entity.SKSDefinition{},
+				&entity.SKSExamSchedule{},
+			)
+		},
+		func(db *gorm.DB) error {
+			return db.Migrator().DropTable(
+				&entity.SKSExamSchedule{},
+				&entity.SKSDefinition{},
+				&entity.ClassSchedule{},
+				&entity.Subject{},
+			)
+		},
+	)
 }

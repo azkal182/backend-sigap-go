@@ -19,6 +19,7 @@ import (
 	appService "github.com/your-org/go-backend-starter/internal/application/service"
 	"github.com/your-org/go-backend-starter/internal/application/usecase"
 	"github.com/your-org/go-backend-starter/internal/domain/entity"
+	domainRepo "github.com/your-org/go-backend-starter/internal/domain/repository"
 	"github.com/your-org/go-backend-starter/internal/domain/service"
 	"github.com/your-org/go-backend-starter/internal/infrastructure/database"
 	infraRepo "github.com/your-org/go-backend-starter/internal/infrastructure/repository"
@@ -33,6 +34,426 @@ import (
 // testUserRepository wraps userRepository to use a specific DB
 type testUserRepository struct {
 	db *gorm.DB
+}
+
+func seedClass(t *testing.T, db *gorm.DB, fanID uuid.UUID) entity.Class {
+	classEntity := entity.Class{
+		ID:        uuid.New(),
+		FanID:     fanID,
+		Name:      fmt.Sprintf("Class-%d", time.Now().UnixNano()),
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := db.Create(&classEntity).Error; err != nil {
+		t.Fatalf("failed to seed class: %v", err)
+	}
+	return classEntity
+}
+
+func seedTeacher(t *testing.T, db *gorm.DB) entity.Teacher {
+	teacher := entity.Teacher{
+		ID:          uuid.New(),
+		TeacherCode: fmt.Sprintf("TCH-%d", time.Now().UnixNano()),
+		FullName:    "Integration Teacher",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := db.Create(&teacher).Error; err != nil {
+		t.Fatalf("failed to seed teacher: %v", err)
+	}
+	return teacher
+}
+
+func seedSubject(t *testing.T, db *gorm.DB, name string) entity.Subject {
+	subject := entity.Subject{
+		ID:        uuid.New(),
+		Name:      fmt.Sprintf("%s-%d", name, time.Now().UnixNano()),
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := db.Create(&subject).Error; err != nil {
+		t.Fatalf("failed to seed subject: %v", err)
+	}
+	return subject
+}
+
+func seedScheduleSlot(t *testing.T, db *gorm.DB, dormID uuid.UUID, slotNumber int) entity.ScheduleSlot {
+	start := time.Now().UTC().Add(time.Hour)
+	end := start.Add(45 * time.Minute)
+	slot := entity.ScheduleSlot{
+		ID:          uuid.New(),
+		DormitoryID: dormID,
+		SlotNumber:  slotNumber,
+		Name:        fmt.Sprintf("Slot-%d", slotNumber),
+		StartTime:   start,
+		EndTime:     end,
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := db.Create(&slot).Error; err != nil {
+		t.Fatalf("failed to seed schedule slot: %v", err)
+	}
+	return slot
+}
+
+func TestScheduleSlotEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Slot Dorm")
+	user, token := createTestUser(t, db, "slot-admin", tokenService, "schedule_slots:read", "schedule_slots:create", "schedule_slots:update", "schedule_slots:delete")
+	assignPermissionsToUser(t, db, user.ID, []string{"schedule_slots:read", "schedule_slots:create", "schedule_slots:update", "schedule_slots:delete"})
+
+	start := time.Now().UTC().Add(time.Hour)
+	end := start.Add(time.Hour)
+	createPayload := map[string]interface{}{
+		"dormitory_id": dorm.ID.String(),
+		"slot_number":  1,
+		"name":         "Morning Slot",
+		"start_time":   start.Format(time.RFC3339),
+		"end_time":     end.Format(time.RFC3339),
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/schedule-slots", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.ScheduleSlotResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	slotID := createResp.Data.ID
+	assert.NotEmpty(t, slotID)
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/schedule-slots?page=1&page_size=5&dormitory_id="+dorm.ID.String(), nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/schedule-slots/"+slotID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	updatePayload := map[string]interface{}{
+		"slot_number": 2,
+		"name":        "Updated Slot",
+	}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/schedule-slots/"+slotID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/schedule-slots/"+slotID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
+func TestClassScheduleEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Schedule Dorm")
+	fan := seedFan(t, db)
+	classEntity := seedClass(t, db, fan.ID)
+	teacher := seedTeacher(t, db)
+	subject := seedSubject(t, db, "Integration Subject")
+	slot := seedScheduleSlot(t, db, dorm.ID, 1)
+
+	user, token := createTestUser(
+		t,
+		db,
+		"schedule-admin",
+		tokenService,
+		"class_schedules:read",
+		"class_schedules:create",
+		"class_schedules:update",
+		"class_schedules:delete",
+	)
+	assignPermissionsToUser(t, db, user.ID, []string{"class_schedules:read", "class_schedules:create", "class_schedules:update", "class_schedules:delete"})
+
+	createPayload := map[string]interface{}{
+		"class_id":     classEntity.ID.String(),
+		"dormitory_id": dorm.ID.String(),
+		"subject_id":   subject.ID.String(),
+		"teacher_id":   teacher.ID.String(),
+		"slot_id":      slot.ID.String(),
+		"day_of_week":  "mon",
+		"location":     "Room 101",
+		"notes":        "Initial schedule",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/class-schedules", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.ClassScheduleResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	scheduleID := createResp.Data.ID
+	require.NotEmpty(t, scheduleID)
+
+	listReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/class-schedules?class_id=%s", classEntity.ID.String()), nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/class-schedules/"+scheduleID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	updatePayload := map[string]interface{}{
+		"notes": "Updated schedule",
+	}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/class-schedules/"+scheduleID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/class-schedules/"+scheduleID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
+func TestSKSDefinitionEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	fan := seedFan(t, db)
+	subject := seedSubject(t, db, "Definition Subject")
+	user, token := createTestUser(
+		t,
+		db,
+		"sks-def-admin",
+		tokenService,
+		"sks_definitions:read",
+		"sks_definitions:create",
+		"sks_definitions:update",
+		"sks_definitions:delete",
+	)
+	assignPermissionsToUser(t, db, user.ID, []string{"sks_definitions:read", "sks_definitions:create", "sks_definitions:update", "sks_definitions:delete"})
+
+	createPayload := map[string]interface{}{
+		"fan_id":      fan.ID.String(),
+		"subject_id":  subject.ID.String(),
+		"code":        fmt.Sprintf("SKS-%d", time.Now().UnixNano()),
+		"name":        "Integration SKS",
+		"kkm":         80,
+		"description": "Initial definition",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/sks", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.SKSDefinitionResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	sksID := createResp.Data.ID
+
+	listReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/sks?fan_id=%s", fan.ID.String()), nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/sks/"+sksID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	updatePayload := map[string]interface{}{
+		"name": "Updated SKS",
+	}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/sks/"+sksID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/sks/"+sksID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
+func TestSKSExamEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	fan := seedFan(t, db)
+	subject := seedSubject(t, db, "Exam Subject")
+	sksDefinition := entity.SKSDefinition{
+		ID:          uuid.New(),
+		FanID:       fan.ID,
+		Code:        fmt.Sprintf("SKS-%d", time.Now().UnixNano()),
+		Name:        "Exam Definition",
+		KKM:         75,
+		Description: "Exam definition",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		SubjectID:   &subject.ID,
+	}
+	require.NoError(t, db.Create(&sksDefinition).Error)
+	teacher := seedTeacher(t, db)
+
+	user, token := createTestUser(
+		t,
+		db,
+		"sks-exam-admin",
+		tokenService,
+		"sks_exams:read",
+		"sks_exams:create",
+		"sks_exams:update",
+		"sks_exams:delete",
+	)
+	assignPermissionsToUser(t, db, user.ID, []string{"sks_exams:read", "sks_exams:create", "sks_exams:update", "sks_exams:delete"})
+
+	createPayload := map[string]interface{}{
+		"sks_id":      sksDefinition.ID.String(),
+		"examiner_id": teacher.ID.String(),
+		"exam_date":   "2025-01-10",
+		"exam_time":   "09:00",
+		"location":    "Hall A",
+		"notes":       "Initial exam",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/sks-exams", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.SKSExamScheduleResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	examID := createResp.Data.ID
+
+	listReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/sks-exams?sks_id=%s", sksDefinition.ID.String()), nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/sks-exams/"+examID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	updatePayload := map[string]interface{}{
+		"notes": "Updated exam",
+	}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/sks-exams/"+examID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/sks-exams/"+examID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
+}
+
+func TestTeacherEndpoints(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	user, token := createTestUser(t, db, "teacher-admin", tokenService, "teachers:read", "teachers:create", "teachers:update", "teachers:delete")
+	assignPermissionsToUser(t, db, user.ID, []string{"teachers:read", "teachers:create", "teachers:update", "teachers:delete"})
+
+	createPayload := map[string]interface{}{
+		"teacher_code": "TCHINT001",
+		"full_name":    "Integration Teacher",
+		"gender":       "male",
+		"phone":        "+620000001",
+		"email":        "integration.teacher@example.com",
+	}
+	createBody, _ := json.Marshal(createPayload)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/teachers", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assert.Equal(t, http.StatusCreated, createRes.Code)
+
+	var createResp struct {
+		Data dto.TeacherResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(createRes.Body.Bytes(), &createResp))
+	teacherID := createResp.Data.ID
+	assert.NotEmpty(t, teacherID)
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/teachers?page=1&page_size=5", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listRes := httptest.NewRecorder()
+	router.ServeHTTP(listRes, listReq)
+	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/teachers/"+teacherID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRes := httptest.NewRecorder()
+	router.ServeHTTP(getRes, getReq)
+	assert.Equal(t, http.StatusOK, getRes.Code)
+
+	updatePayload := map[string]interface{}{
+		"phone":     "+620000009",
+		"is_active": true,
+	}
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/teachers/"+teacherID, bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRes := httptest.NewRecorder()
+	router.ServeHTTP(updateRes, updateReq)
+	assert.Equal(t, http.StatusOK, updateRes.Code)
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/teachers/"+teacherID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRes := httptest.NewRecorder()
+	router.ServeHTTP(deleteRes, deleteReq)
+	assert.Equal(t, http.StatusNoContent, deleteRes.Code)
 }
 
 func seedFan(t *testing.T, db *gorm.DB) entity.Fan {
@@ -265,6 +686,12 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	classRepo := infraRepo.NewClassRepository()
 	enrollmentRepo := infraRepo.NewStudentClassEnrollmentRepository()
 	classStaffRepo := infraRepo.NewClassStaffRepository()
+	teacherRepo := infraRepo.NewTeacherRepository()
+	subjectRepo := infraRepo.NewSubjectRepository()
+	classScheduleRepo := infraRepo.NewClassScheduleRepository()
+	sksDefinitionRepo := infraRepo.NewSKSDefinitionRepository()
+	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
+	scheduleSlotRepo := infraRepo.NewScheduleSlotRepository()
 	permissionRepo := infraRepo.NewPermissionRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
@@ -275,6 +702,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	// Initialize services
 	tokenService := infraService.NewJWTService()
 	auditLogger := appService.NewAuditLogger(auditLogRepo)
+	ensureRoleExists(t, roleRepo, "teacher")
 
 	// Initialize use cases
 	authUseCase := usecase.NewAuthUseCase(userRepo, tokenService)
@@ -283,6 +711,11 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
 	fanUseCase := usecase.NewFanUseCase(fanRepo, auditLogger)
 	classUseCase := usecase.NewClassUseCase(classRepo, fanRepo, studentRepo, enrollmentRepo, classStaffRepo, auditLogger)
+	teacherUseCase := usecase.NewTeacherUseCase(teacherRepo, userRepo, roleRepo, auditLogger)
+	scheduleSlotUseCase := usecase.NewScheduleSlotUseCase(scheduleSlotRepo, dormitoryRepo, auditLogger)
+	classScheduleUseCase := usecase.NewClassScheduleUseCase(classScheduleRepo, classRepo, teacherRepo, subjectRepo, scheduleSlotRepo, dormitoryRepo, auditLogger)
+	sksDefinitionUseCase := usecase.NewSKSDefinitionUseCase(sksDefinitionRepo, fanRepo, subjectRepo, auditLogger)
+	sksExamUseCase := usecase.NewSKSExamScheduleUseCase(sksExamRepo, sksDefinitionRepo, teacherRepo, auditLogger)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -295,6 +728,11 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	studentHandler := handler.NewStudentHandler(studentUseCase)
 	fanHandler := handler.NewFanHandler(fanUseCase)
 	classHandler := handler.NewClassHandler(classUseCase)
+	teacherHandler := handler.NewTeacherHandler(teacherUseCase)
+	scheduleSlotHandler := handler.NewScheduleSlotHandler(scheduleSlotUseCase)
+	classScheduleHandler := handler.NewClassScheduleHandler(classScheduleUseCase)
+	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
+	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
@@ -304,7 +742,24 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, userHandler, dormitoryHandler, studentHandler, roleHandler, locationHandler, permissionHandler, auditLogHandler, fanHandler, classHandler, authMiddleware)
+	r := router.SetupRouter(
+		authHandler,
+		userHandler,
+		dormitoryHandler,
+		studentHandler,
+		roleHandler,
+		locationHandler,
+		permissionHandler,
+		auditLogHandler,
+		fanHandler,
+		classHandler,
+		teacherHandler,
+		classScheduleHandler,
+		sksDefinitionHandler,
+		sksExamHandler,
+		scheduleSlotHandler,
+		authMiddleware,
+	)
 
 	cleanup := func() {
 		database.DB = originalDB // Restore original DB
@@ -421,6 +876,25 @@ func assignDormitoryAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
 
 func assignStudentAdminRole(t *testing.T, db *gorm.DB, userID uuid.UUID) {
 	assignRoleWithPermissions(t, db, userID, "student-admin", []string{"student:read", "student:create", "student:update"})
+}
+
+func ensureRoleExists(t *testing.T, roleRepo domainRepo.RoleRepository, slug string) {
+	ctx := context.Background()
+	if role, _ := roleRepo.GetBySlug(ctx, slug); role != nil {
+		return
+	}
+	role := &entity.Role{
+		ID:          uuid.New(),
+		Name:        strings.Title(strings.ReplaceAll(slug, "_", " ")),
+		Slug:        slug,
+		IsActive:    true,
+		IsProtected: false,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := roleRepo.Create(ctx, role); err != nil {
+		t.Fatalf("failed to create %s role: %v", slug, err)
+	}
 }
 
 func TestAuthIntegration_RegisterAndLogin(t *testing.T) {

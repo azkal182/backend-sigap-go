@@ -50,6 +50,17 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 - ✅ Error response dengan struktur standar
 - ✅ Helper functions untuk berbagai HTTP status codes
 
+### 7. Schedule Slot Management
+- ✅ CRUD time-slot terstandarisasi per asrama/dormitory
+- ✅ Validasi overlap slot per dormitory dan status aktif
+- ✅ Reusable oleh fitur jadwal kelas sehingga jam dapat diwariskan otomatis
+
+### 8. Class Schedule & SKS Scheduling
+- ✅ CRUD jadwal kelas dengan opsi gunakan slot atau jam manual + validasi guru aktif
+- ✅ CRUD definisi SKS per FAN dan map ke subject opsional
+- ✅ CRUD jadwal ujian SKS dengan pemeriksa (teacher) aktif + validasi tanggal/waktu
+- ✅ Permission khusus (`class_schedules:*`, `sks_definitions:*`, `sks_exams:*`) dan audit logging untuk seluruh mutasi
+
 ## 📁 Struktur Project (Hexagonal Architecture)
 
 ```
@@ -280,6 +291,34 @@ Server akan berjalan di `http://localhost:8080`
 - `DELETE /api/classes/:id` - Delete class (requires `classes:delete` permission)
 - `POST /api/classes/:id/students` - Enroll student in a class (requires `classes:update` permission)
 - `POST /api/classes/:id/staff` - Assign staff to class (requires `classes:update` permission)
+
+### Schedule Slots (Protected)
+- `GET /api/schedule-slots?dormitory_id=...` - List slots per dormitory (requires `schedule_slots:read`)
+- `GET /api/schedule-slots/:id` - Get specific slot detail (requires `schedule_slots:read`)
+- `POST /api/schedule-slots` - Create slot with overlap validation (requires `schedule_slots:create`)
+- `PUT /api/schedule-slots/:id` - Update slot meta/time window (requires `schedule_slots:update`)
+- `DELETE /api/schedule-slots/:id` - Delete/deactivate slot (requires `schedule_slots:delete`)
+
+### Class Schedules (Protected)
+- `GET /api/class-schedules?class_id=...` - List class schedules with filters (requires `class_schedules:read`)
+- `GET /api/class-schedules/:id` - Get schedule detail (requires `class_schedules:read`)
+- `POST /api/class-schedules` - Create schedule referencing slot or manual time (requires `class_schedules:create`)
+- `PUT /api/class-schedules/:id` - Update schedule metadata/time/teacher (requires `class_schedules:update`)
+- `DELETE /api/class-schedules/:id` - Delete schedule (requires `class_schedules:delete`)
+
+### SKS Definitions (Protected)
+- `GET /api/sks?fan_id=...` - List SKS definitions per FAN (requires `sks_definitions:read`)
+- `GET /api/sks/:id` - Get SKS definition detail (requires `sks_definitions:read`)
+- `POST /api/sks` - Create SKS definition (requires `sks_definitions:create`)
+- `PUT /api/sks/:id` - Update definition attributes/status (requires `sks_definitions:update`)
+- `DELETE /api/sks/:id` - Delete definition (requires `sks_definitions:delete`)
+
+### SKS Exam Schedules (Protected)
+- `GET /api/sks-exams?sks_id=...` - List exam schedules for a definition (requires `sks_exams:read`)
+- `GET /api/sks-exams/:id` - Get exam schedule detail (requires `sks_exams:read`)
+- `POST /api/sks-exams` - Create exam schedule with date/time validation (requires `sks_exams:create`)
+- `PUT /api/sks-exams/:id` - Update examiner/date/time/location (requires `sks_exams:update`)
+- `DELETE /api/sks-exams/:id` - Delete exam schedule (requires `sks_exams:delete`)
 
 ### Audit Logs (Protected)
 - `GET /api/audit-logs` - List audit logs (with pagination and filters, requires `audit:read` permission)

@@ -141,7 +141,9 @@ Berikut penulisan ulang seluruh **phase** dengan penamaan **tabel, field, dan en
 
 ### **Goals**
 
-* Menyediakan jadwal pelajaran & jadwal ujian SKS.
+* Menyediakan jadwal pelajaran & jadwal ujian SKS, berbasis slot waktu dormitory.
+* Memastikan integrasi dengan modul teacher (aktif), FAN, dan schedule slot.
+* Semua mutasi jadwal diaudit dan diproteksi permission khusus.
 
 ### **Tables**
 
@@ -151,7 +153,7 @@ Berikut penulisan ulang seluruh **phase** dengan penamaan **tabel, field, dan en
 * `class_schedules`
 
   * `id`, `class_id`, `subject_id`, `teacher_id`,
-    `day_of_week`, `start_time`, `end_time`.
+    `day_of_week`, `start_time`, `end_time`, `slot_id`, `dormitory_id`, `is_active`.
 * `sks_definitions`
 
   * `id`, `fan_id`, `code`, `name`, `kkm`, `description`.
@@ -159,20 +161,44 @@ Berikut penulisan ulang seluruh **phase** dengan penamaan **tabel, field, dan en
 
   * `id`, `sks_id`, `exam_date`, `exam_time`, `location`, `examiner_id`.
 
+*Depends on*: `schedule_slots` (slot_number per dormitory dengan validasi overlap) dari tahap sebelumnya.
+
+### **Business Rules**
+
+1. Class schedule dapat menggunakan slot (otomatis ambil start/end) atau jam manual.
+2. Slot harus berasal dari dormitory yang sama dengan kelas; slot harus aktif.
+3. Teacher wajib status aktif sebelum dijadwalkan.
+4. SKS definition optional subject; kode unik per sistem.
+5. SKS exam schedule memerlukan tanggal (YYYY-MM-DD) dan waktu (HH:MM) valid serta examiner teacher aktif (opsional).
+6. Semua operasi create/update/delete memicu audit log dan dilindungi permission `class_schedules:*`, `sks_definitions:*`, `sks_exams:*`.
+
 ### **Endpoints**
 
 * Class schedule:
 
+  * `GET /api/class-schedules?class_id=...&teacher_id=...&dormitory_id=...`
+  * `GET /api/class-schedules/:id`
   * `POST /api/class-schedules`
-  * `GET /api/class-schedules?class_id=...`
+  * `PUT /api/class-schedules/:id`
+  * `DELETE /api/class-schedules/:id`
 * SKS:
 
-  * `POST /api/sks`
   * `GET /api/sks?fan_id=...`
+  * `GET /api/sks/:id`
+  * `POST /api/sks`
+  * `PUT /api/sks/:id`
+  * `DELETE /api/sks/:id`
 * SKS exam schedule:
 
-  * `POST /api/sks-exams`
   * `GET /api/sks-exams?sks_id=...`
+  * `GET /api/sks-exams/:id`
+  * `POST /api/sks-exams`
+  * `PUT /api/sks-exams/:id`
+  * `DELETE /api/sks-exams/:id`
+
+### **Status**
+
+✅ Implemented (Nov 2025): domain entities, repositories, use cases, HTTP handlers, router wiring, permissions + seed, integration tests, dan dokumentasi (README + phase progress). Phase 5 adalah fokus berikutnya.
 
 ---
 

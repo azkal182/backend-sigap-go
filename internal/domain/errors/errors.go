@@ -36,6 +36,28 @@ var (
 	// Fan errors
 	ErrFanNotFound = errors.New("fan not found")
 
+	// Teacher errors
+	ErrTeacherNotFound      = errors.New("teacher not found")
+	ErrTeacherAlreadyExists = errors.New("teacher already exists")
+	ErrTeacherUserAssigned  = errors.New("user already linked to another teacher")
+
+	// Schedule slot errors
+	ErrScheduleSlotNotFound = errors.New("schedule slot not found")
+	ErrScheduleSlotConflict = errors.New("schedule slot conflict")
+	ErrScheduleSlotInactive = errors.New("schedule slot inactive")
+
+	// Subject errors
+	ErrSubjectNotFound = errors.New("subject not found")
+
+	// Class schedule errors
+	ErrClassScheduleNotFound = errors.New("class schedule not found")
+	ErrClassScheduleConflict = errors.New("class schedule conflict")
+
+	// SKS errors
+	ErrSKSDefinitionNotFound     = errors.New("sks definition not found")
+	ErrSKSDefinitionAlreadyExist = errors.New("sks definition already exists")
+	ErrSKSExamScheduleNotFound   = errors.New("sks exam schedule not found")
+
 	// Class errors
 	ErrClassNotFound          = errors.New("class not found")
 	ErrStudentAlreadyEnrolled = errors.New("student already enrolled in class")

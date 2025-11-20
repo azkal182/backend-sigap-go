@@ -19,6 +19,11 @@ func SetupRouter(
 	auditLogHandler *handler.AuditLogHandler,
 	fanHandler *handler.FanHandler,
 	classHandler *handler.ClassHandler,
+	teacherHandler *handler.TeacherHandler,
+	classScheduleHandler *handler.ClassScheduleHandler,
+	sksDefinitionHandler *handler.SKSDefinitionHandler,
+	sksExamHandler *handler.SKSExamScheduleHandler,
+	scheduleSlotHandler *handler.ScheduleSlotHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -140,6 +145,56 @@ func SetupRouter(
 				classes.DELETE(":id", authMiddleware.RequirePermission("classes:delete"), classHandler.DeleteClass)
 				classes.POST(":id/students", authMiddleware.RequirePermission("classes:update"), classHandler.EnrollStudent)
 				classes.POST(":id/staff", authMiddleware.RequirePermission("classes:update"), classHandler.AssignStaff)
+			}
+
+			// Teacher routes
+			teachers := protected.Group("/teachers")
+			{
+				teachers.GET("", authMiddleware.RequirePermission("teachers:read"), teacherHandler.ListTeachers)
+				teachers.GET(":id", authMiddleware.RequirePermission("teachers:read"), teacherHandler.GetTeacher)
+				teachers.POST("", authMiddleware.RequirePermission("teachers:create"), teacherHandler.CreateTeacher)
+				teachers.PUT(":id", authMiddleware.RequirePermission("teachers:update"), teacherHandler.UpdateTeacher)
+				teachers.DELETE(":id", authMiddleware.RequirePermission("teachers:delete"), teacherHandler.DeactivateTeacher)
+			}
+
+			// Schedule slot routes
+			scheduleSlots := protected.Group("/schedule-slots")
+			{
+				scheduleSlots.GET("", authMiddleware.RequirePermission("schedule_slots:read"), scheduleSlotHandler.ListScheduleSlots)
+				scheduleSlots.GET(":id", authMiddleware.RequirePermission("schedule_slots:read"), scheduleSlotHandler.GetScheduleSlot)
+				scheduleSlots.POST("", authMiddleware.RequirePermission("schedule_slots:create"), scheduleSlotHandler.CreateScheduleSlot)
+				scheduleSlots.PUT(":id", authMiddleware.RequirePermission("schedule_slots:update"), scheduleSlotHandler.UpdateScheduleSlot)
+				scheduleSlots.DELETE(":id", authMiddleware.RequirePermission("schedule_slots:delete"), scheduleSlotHandler.DeleteScheduleSlot)
+			}
+
+			// Class schedule routes
+			classSchedules := protected.Group("/class-schedules")
+			{
+				classSchedules.GET("", authMiddleware.RequirePermission("class_schedules:read"), classScheduleHandler.ListClassSchedules)
+				classSchedules.GET(":id", authMiddleware.RequirePermission("class_schedules:read"), classScheduleHandler.GetClassSchedule)
+				classSchedules.POST("", authMiddleware.RequirePermission("class_schedules:create"), classScheduleHandler.CreateClassSchedule)
+				classSchedules.PUT(":id", authMiddleware.RequirePermission("class_schedules:update"), classScheduleHandler.UpdateClassSchedule)
+				classSchedules.DELETE(":id", authMiddleware.RequirePermission("class_schedules:delete"), classScheduleHandler.DeleteClassSchedule)
+			}
+
+			// SKS definition routes
+			sksDefinitions := protected.Group("/sks")
+			{
+				sksDefinitions.GET("", authMiddleware.RequirePermission("sks_definitions:read"), sksDefinitionHandler.ListSKSDefinitions)
+				sksDefinitions.GET(":id", authMiddleware.RequirePermission("sks_definitions:read"), sksDefinitionHandler.GetSKSDefinition)
+				sksDefinitions.POST("", authMiddleware.RequirePermission("sks_definitions:create"), sksDefinitionHandler.CreateSKSDefinition)
+				sksDefinitions.PUT(":id", authMiddleware.RequirePermission("sks_definitions:update"), sksDefinitionHandler.UpdateSKSDefinition)
+				sksDefinitions.DELETE(":id", authMiddleware.RequirePermission("sks_definitions:delete"), sksDefinitionHandler.DeleteSKSDefinition)
+			}
+
+			// SKS exam schedule routes
+			sksExams := protected.Group("/sks-exams")
+			{
+				sksExams.GET("", authMiddleware.RequirePermission("sks_exams:read"), sksExamHandler.ListSKSExamSchedules)
+				sksExams.GET(":id", authMiddleware.RequirePermission("sks_exams:read"), sksExamHandler.GetSKSExamSchedule)
+				sksExams.POST("", authMiddleware.RequirePermission("sks_exams:create"), sksExamHandler.CreateSKSExamSchedule)
+				sksExams.PUT(":id", authMiddleware.RequirePermission("sks_exams:update"), sksExamHandler.UpdateSKSExamSchedule)
+				sksExams.DELETE(":id", authMiddleware.RequirePermission("sks_exams:delete"), sksExamHandler.DeleteSKSExamSchedule)
 			}
 		}
 	}
