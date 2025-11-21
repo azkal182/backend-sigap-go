@@ -393,4 +393,39 @@ func init() {
 			return db.Migrator().DropTable(&entity.LeavePermit{})
 		},
 	)
+
+	RegisterMigration(
+		"015_add_operational_indexes",
+		"Add composite indexes for attendance, leave permits, health statuses, and dormitory history",
+		func(db *gorm.DB) error {
+			stmts := []string{
+				"CREATE INDEX IF NOT EXISTS idx_attendance_sessions_schedule_date_status ON attendance_sessions (class_schedule_id, date, status)",
+				"CREATE INDEX IF NOT EXISTS idx_attendance_sessions_teacher_date ON attendance_sessions (teacher_id, date)",
+				"CREATE INDEX IF NOT EXISTS idx_leave_permits_student_status_dates ON leave_permits (student_id, status, start_date, end_date)",
+				"CREATE INDEX IF NOT EXISTS idx_health_statuses_student_status_dates ON health_statuses (student_id, status, start_date, COALESCE(end_date, '9999-12-31'))",
+				"CREATE INDEX IF NOT EXISTS idx_student_dormitory_history_student_end_start ON student_dormitory_history (student_id, end_date, start_date DESC)",
+			}
+			for _, stmt := range stmts {
+				if err := db.Exec(stmt).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+		func(db *gorm.DB) error {
+			stmts := []string{
+				"DROP INDEX IF EXISTS idx_student_dormitory_history_student_end_start",
+				"DROP INDEX IF EXISTS idx_health_statuses_student_status_dates",
+				"DROP INDEX IF EXISTS idx_leave_permits_student_status_dates",
+				"DROP INDEX IF EXISTS idx_attendance_sessions_teacher_date",
+				"DROP INDEX IF EXISTS idx_attendance_sessions_schedule_date_status",
+			}
+			for _, stmt := range stmts {
+				if err := db.Exec(stmt).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	)
 }
