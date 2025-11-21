@@ -1,0 +1,4237 @@
+openapi: 3.1.0
+info:
+  title: SIGAP API
+  version: 0.1.0
+  description: >-
+    Hybrid OpenAPI specification for the SIGAP backend. This file is the
+    canonical machine-readable source and should always be kept in sync with
+    the Markdown companion doc (docs/api_spec.md) and the DTO definitions under
+    internal/application/dto.
+servers:
+  - url: https://{domain}/api
+    description: Production deployment
+    variables:
+      domain:
+        default: api.sigap.example.com
+        description: Base domain for the production API gateway.
+  - url: http://localhost:{port}/api
+    description: Local development
+    variables:
+      port:
+        default: "8080"
+        description: Matches SERVER_PORT in the application environment.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates whether the request succeeded.
+        message:
+          type: string
+          description: Human readable status message.
+        error:
+          type: string
+          nullable: true
+          description: Optional error details when success=false.
+      required:
+        - success
+
+    AuthUserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+      required: [id, username, name]
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+      required: [username, password, name]
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required: [refresh_token]
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/AuthUserSummary'
+      required: [access_token, refresh_token, expires_at, user]
+
+    AuthSuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AuthResponse'
+
+    DormitorySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        name:
+          type: string
+        is_active:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        dormitories:
+          type: array
+          items:
+            $ref: '#/components/schemas/DormitorySummary'
+      required: [id, username, name, is_active]
+
+    CurrentUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/UserProfile'
+
+    Permission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+      required: [id, name, slug]
+
+    PaginatedPermissionsData:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+      required: [permissions, total, page, page_size]
+
+    PermissionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PaginatedPermissionsData'
+
+    Province:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+      required: [id, name]
+
+    Regency:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+        full_code:
+          type: string
+        province_id:
+          type: integer
+
+    District:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        full_code:
+          type: string
+        regency_id:
+          type: integer
+
+    Village:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        full_code:
+          type: string
+        pos_code:
+          type: string
+        district_id:
+          type: integer
+
+    PaginatedLocationData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+          description: Placeholder; overridden per endpoint.
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+      required: [items, total, page, page_size]
+
+    ProvinceListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PaginatedLocationData'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Province'
+
+    RegencyListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PaginatedLocationData'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Regency'
+
+    DistrictListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PaginatedLocationData'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/District'
+
+    VillageListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PaginatedLocationData'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Village'
+
+    ProvinceResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Province'
+
+    RegencyResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Regency'
+
+    DistrictResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/District'
+
+    VillageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Village'
+
+    Dormitory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        gender:
+          type: string
+          enum: [male, female]
+        level:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required: [id, name, gender, level, code, is_active]
+
+    CreateDormitoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        gender:
+          type: string
+          enum: [male, female]
+        level:
+          type: string
+          minLength: 2
+          maxLength: 50
+        code:
+          type: string
+          minLength: 2
+          maxLength: 16
+        description:
+          type: string
+      required: [name, gender, level, code]
+
+    UpdateDormitoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        gender:
+          type: string
+          enum: [male, female]
+        level:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+
+    AssignDormitoryUserRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+      required: [user_id]
+
+    DormitoryListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                dormitories:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Dormitory'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateSKSDefinitionRequest:
+      type: object
+      properties:
+        fan_id:
+          type: string
+          format: uuid
+        subject_id:
+          type: string
+          nullable: true
+        code:
+          type: string
+        name:
+          type: string
+        kkm:
+          type: number
+        description:
+          type: string
+        is_active:
+          type: boolean
+      required: [fan_id, code, name]
+
+    UpdateSKSDefinitionRequest:
+      type: object
+      properties:
+        subject_id:
+          type: string
+        name:
+          type: string
+        kkm:
+          type: number
+        description:
+          type: string
+        is_active:
+          type: boolean
+
+    SKSDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fan_id:
+          type: string
+        subject_id:
+          type: string
+          nullable: true
+        code:
+          type: string
+        name:
+          type: string
+        kkm:
+          type: number
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    SKSDefinitionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                definitions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SKSDefinition'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateSKSExamRequest:
+      type: object
+      properties:
+        sks_id:
+          type: string
+          format: uuid
+        examiner_id:
+          type: string
+          nullable: true
+        exam_date:
+          type: string
+        exam_time:
+          type: string
+        location:
+          type: string
+        notes:
+          type: string
+      required: [sks_id, exam_date, exam_time]
+
+    UpdateSKSExamRequest:
+      type: object
+      properties:
+        examiner_id:
+          type: string
+        exam_date:
+          type: string
+        exam_time:
+          type: string
+        location:
+          type: string
+        notes:
+          type: string
+
+    SKSExam:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sks_id:
+          type: string
+          format: uuid
+        examiner_id:
+          type: string
+          nullable: true
+        exam_date:
+          type: string
+        exam_time:
+          type: string
+        location:
+          type: string
+        notes:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    SKSExamListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                exams:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SKSExam'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateLeavePermitRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [home_leave, official_duty]
+        reason:
+          type: string
+        start_date:
+          type: string
+        end_date:
+          type: string
+      required: [student_id, type, reason, start_date, end_date]
+
+    UpdateLeavePermitStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected, completed]
+      required: [status]
+
+    LeavePermit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+        type:
+          type: string
+        reason:
+          type: string
+        start_date:
+          type: string
+        end_date:
+          type: string
+        status:
+          type: string
+        created_by:
+          type: string
+        approved_by:
+          type: string
+          nullable: true
+        approved_at:
+          type: string
+          nullable: true
+
+    LeavePermitListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                permits:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LeavePermit'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateHealthStatusRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        diagnosis:
+          type: string
+        notes:
+          type: string
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+      required: [student_id, diagnosis, start_date]
+
+    RevokeHealthStatusRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+        diagnosis:
+          type: string
+        notes:
+          type: string
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+        status:
+          type: string
+        created_by:
+          type: string
+        revoked_by:
+          type: string
+          nullable: true
+        revoked_at:
+          type: string
+          nullable: true
+
+    HealthStatusListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                statuses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/HealthStatus'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    AttendanceReportRow:
+      type: object
+      properties:
+        dormitory_id:
+          type: string
+        class_id:
+          type: string
+        fan_id:
+          type: string
+        total:
+          type: integer
+        present:
+          type: integer
+        absent:
+          type: integer
+        permit:
+          type: integer
+        sick:
+          type: integer
+
+    LeaveReportRow:
+      type: object
+      properties:
+        status:
+          type: string
+        type:
+          type: string
+        count:
+          type: integer
+
+    HealthReportRow:
+      type: object
+      properties:
+        status:
+          type: string
+        dormitory_id:
+          type: string
+        count:
+          type: integer
+
+    SKSReportRow:
+      type: object
+      properties:
+        fan_id:
+          type: string
+        sks_id:
+          type: string
+        is_passed:
+          type: boolean
+        average_score:
+          type: number
+
+    MutationReportRow:
+      type: object
+      properties:
+        student_id:
+          type: string
+        dormitory_id:
+          type: string
+        fan_id:
+          type: string
+        count:
+          type: integer
+
+    DormitoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Dormitory'
+
+    CreateStudentRequest:
+      type: object
+      properties:
+        student_number:
+          type: string
+        full_name:
+          type: string
+        birth_date:
+          type: string
+          format: date-time
+        gender:
+          type: string
+          enum: [male, female]
+        parent_name:
+          type: string
+      required: [student_number, full_name, birth_date, gender, parent_name]
+
+    UpdateStudentRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+        birth_date:
+          type: string
+          format: date-time
+        gender:
+          type: string
+          enum: [male, female]
+        parent_name:
+          type: string
+
+    UpdateStudentStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, inactive, leave, graduated]
+      required: [status]
+
+    MutateStudentDormitoryRequest:
+      type: object
+      properties:
+        dormitory_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date-time
+      required: [dormitory_id, start_date]
+
+    StudentDormitoryEvent:
+      type: object
+      properties:
+        dormitory_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_number:
+          type: string
+        full_name:
+          type: string
+        birth_date:
+          type: string
+        gender:
+          type: string
+        parent_name:
+          type: string
+        status:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        dormitory_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentDormitoryEvent'
+
+    StudentListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                students:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Student'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateStudentSKSResultRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        sks_id:
+          type: string
+          format: uuid
+        score:
+          type: number
+        is_passed:
+          type: boolean
+        exam_date:
+          type: string
+        examiner_id:
+          type: string
+          format: uuid
+      required: [student_id, sks_id, score]
+
+    UpdateStudentSKSResultRequest:
+      type: object
+      properties:
+        score:
+          type: number
+        is_passed:
+          type: boolean
+        exam_date:
+          type: string
+        examiner_id:
+          type: string
+          format: uuid
+
+    StudentSKSResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        fan_id:
+          type: string
+          format: uuid
+        sks_id:
+          type: string
+          format: uuid
+        score:
+          type: number
+        is_passed:
+          type: boolean
+        exam_date:
+          type: string
+          nullable: true
+        examiner_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    StudentSKSResultListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                results:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/StudentSKSResult'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    FanCompletionStatus:
+      type: object
+      properties:
+        fan_id:
+          type: string
+          format: uuid
+        is_completed:
+          type: boolean
+        completed_at:
+          type: string
+          nullable: true
+
+    FanCompletionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/FanCompletionStatus'
+
+    CreateFanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+        description:
+          type: string
+      required: [name, level]
+
+    UpdateFanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+        description:
+          type: string
+
+    Fan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        level:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    FanListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                fans:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Fan'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateClassRequest:
+      type: object
+      properties:
+        fan_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        capacity:
+          type: integer
+        is_active:
+          type: boolean
+      required: [fan_id, name]
+
+    UpdateClassRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+        is_active:
+          type: boolean
+
+    Class:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fan_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        capacity:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    ClassListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Class'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    EnrollStudentRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+      required: [student_id, start_date]
+
+    AssignClassStaffRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+      required: [user_id, role]
+
+    CreateTeacherRequest:
+      type: object
+      properties:
+        teacher_code:
+          type: string
+        full_name:
+          type: string
+        gender:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        specialization:
+          type: string
+        employment_status:
+          type: string
+        joined_at:
+          type: string
+          format: date-time
+        existing_username:
+          type: string
+      required: [teacher_code, full_name]
+
+    UpdateTeacherRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+        gender:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        specialization:
+          type: string
+        employment_status:
+          type: string
+        joined_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    Teacher:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        teacher_code:
+          type: string
+        full_name:
+          type: string
+        gender:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        specialization:
+          type: string
+        employment_status:
+          type: string
+        joined_at:
+          type: string
+        is_active:
+          type: boolean
+        user_id:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    TeacherListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                teachers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Teacher'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateScheduleSlotRequest:
+      type: object
+      properties:
+        dormitory_id:
+          type: string
+          format: uuid
+        slot_number:
+          type: integer
+        name:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        description:
+          type: string
+      required: [dormitory_id, slot_number, name, start_time, end_time]
+
+    UpdateScheduleSlotRequest:
+      type: object
+      properties:
+        slot_number:
+          type: integer
+        name:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+
+    ScheduleSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dormitory_id:
+          type: string
+          format: uuid
+        slot_number:
+          type: integer
+        name:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    ScheduleSlotListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                slots:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScheduleSlot'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateClassScheduleRequest:
+      type: object
+      properties:
+        class_id:
+          type: string
+          format: uuid
+        dormitory_id:
+          type: string
+          format: uuid
+        subject_id:
+          type: string
+          nullable: true
+        teacher_id:
+          type: string
+          format: uuid
+        slot_id:
+          type: string
+          nullable: true
+        day_of_week:
+          type: string
+        start_time:
+          type: string
+          nullable: true
+        end_time:
+          type: string
+          nullable: true
+        location:
+          type: string
+        notes:
+          type: string
+      required: [class_id, dormitory_id, teacher_id, day_of_week]
+
+    UpdateClassScheduleRequest:
+      type: object
+      properties:
+        subject_id:
+          type: string
+        teacher_id:
+          type: string
+        slot_id:
+          type: string
+        day_of_week:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        location:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+
+    ClassSchedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        dormitory_id:
+          type: string
+          format: uuid
+        subject_id:
+          type: string
+          nullable: true
+        teacher_id:
+          type: string
+        slot_id:
+          type: string
+          nullable: true
+        day_of_week:
+          type: string
+        start_time:
+          type: string
+          nullable: true
+        end_time:
+          type: string
+          nullable: true
+        location:
+          type: string
+        notes:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    ClassScheduleListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                schedules:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ClassSchedule'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    OpenAttendanceSessionRequest:
+      type: object
+      properties:
+        class_schedule_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        date:
+          type: string
+      required: [class_schedule_ids, date]
+
+    SubmitStudentAttendanceRequest:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            type: object
+            properties:
+              student_id:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [present, absent, permit, sick]
+              note:
+                type: string
+      required: [records]
+
+    SubmitTeacherAttendanceRequest:
+      type: object
+      properties:
+        teacher_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [present, absent]
+      required: [teacher_id, status]
+
+    LockAttendanceRequest:
+      type: object
+      properties:
+        date:
+          type: string
+      required: [date]
+
+    AttendanceStudentRecord:
+      type: object
+      properties:
+        student_id:
+          type: string
+        status:
+          type: string
+        note:
+          type: string
+
+    AttendanceTeacherRecord:
+      type: object
+      properties:
+        teacher_id:
+          type: string
+        status:
+          type: string
+
+    AttendanceSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        class_schedule_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+        start_time:
+          type: string
+          nullable: true
+        end_time:
+          type: string
+          nullable: true
+        teacher_id:
+          type: string
+        status:
+          type: string
+        locked_at:
+          type: string
+          nullable: true
+        student_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceStudentRecord'
+        teacher_record:
+          $ref: '#/components/schemas/AttendanceTeacherRecord'
+
+    AttendanceSessionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                sessions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AttendanceSession'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required: [username, password, name]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        username:
+          type: string
+        is_active:
+          type: boolean
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        name:
+          type: string
+        is_active:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        dormitories:
+          type: array
+          items:
+            $ref: '#/components/schemas/DormitorySummary'
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required: [id, username, name, is_active]
+
+    ListUsersResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/UserResponse'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    AssignRoleRequest:
+      type: object
+      properties:
+        role_id:
+          type: string
+          format: uuid
+      required: [role_id]
+
+    CreateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+        is_protected:
+          type: boolean
+        permission_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required: [name, slug]
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+
+    RoleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+        is_protected:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required: [id, name, slug, is_active, is_protected]
+
+    ListRolesResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RoleResponse'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total_pages:
+                  type: integer
+
+    AssignPermissionRequest:
+      type: object
+      properties:
+        permission_id:
+          type: string
+          format: uuid
+      required: [permission_id]
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Simple liveness probe.
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '409':
+          description: Username already exists
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Invalid or expired token
+
+  /me:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+
+  /permissions:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [permissions]
+      summary: List permissions
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number (default 1)
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+          description: Page size (default 10)
+      responses:
+        '200':
+          description: Paginated permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionListResponse'
+
+  /provinces:
+    get:
+      tags: [locations]
+      summary: List provinces
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Province list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinceListResponse'
+
+  /provinces/{id}:
+    get:
+      tags: [locations]
+      summary: Get province detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Province detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinceResponse'
+        '404':
+          description: Province not found
+
+  /regencies:
+    get:
+      tags: [locations]
+      summary: List regencies
+      parameters:
+        - in: query
+          name: province_id
+          schema:
+            type: integer
+          description: Filter by province
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Regency list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegencyListResponse'
+
+  /regencies/{id}:
+    get:
+      tags: [locations]
+      summary: Get regency detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Regency detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegencyResponse'
+        '404':
+          description: Regency not found
+
+  /districts:
+    get:
+      tags: [locations]
+      summary: List districts
+      parameters:
+        - in: query
+          name: regency_id
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: District list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistrictListResponse'
+
+  /districts/{id}:
+    get:
+      tags: [locations]
+      summary: Get district detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: District detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistrictResponse'
+        '404':
+          description: District not found
+
+  /villages:
+    get:
+      tags: [locations]
+      summary: List villages
+      parameters:
+        - in: query
+          name: district_id
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Village list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VillageListResponse'
+
+  /villages/{id}:
+    get:
+      tags: [locations]
+      summary: Get village detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Village detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VillageResponse'
+        '404':
+          description: Village not found
+
+  /users:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: List users
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUsersResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+
+  /users/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Get user by ID
+      responses:
+        '200':
+          description: User detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Update user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Delete user
+      responses:
+        '204':
+          description: User deleted
+
+  /users/{id}/roles:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Assign role to user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        '200':
+          description: Role assigned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+
+  /users/{id}/roles/{role_id}:
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [users]
+      summary: Remove role from user
+      parameters:
+        - in: path
+          name: role_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Role removed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+
+  /roles:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: List roles
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRolesResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoleResponse'
+
+  /roles/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Get role by ID
+      responses:
+        '200':
+          description: Role detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoleResponse'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Update role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoleResponse'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Delete role
+      responses:
+        '204':
+          description: Role deleted
+
+  /roles/{id}/permissions:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Assign permission to role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignPermissionRequest'
+      responses:
+        '200':
+          description: Permission assigned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoleResponse'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [roles]
+      summary: Remove permission from role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignPermissionRequest'
+      responses:
+        '200':
+          description: Permission removed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoleResponse'
+
+  /dormitories:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: List dormitories accessible to the caller
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated dormitories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Create dormitory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDormitoryRequest'
+      responses:
+        '201':
+          description: Dormitory created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryResponse'
+
+  /dormitories/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Get dormitory detail (requires guard access)
+      description: Caller must both own the required permission and pass dormitory guard middleware.
+      responses:
+        '200':
+          description: Dormitory detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryResponse'
+        '403':
+          description: Guard denied access to the dormitory
+    put:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Update dormitory (guard + permission)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDormitoryRequest'
+      responses:
+        '200':
+          description: Dormitory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryResponse'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Delete dormitory (guard + permission)
+      responses:
+        '204':
+          description: Dormitory deleted
+
+  /dormitories/{id}/users:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Assign user to dormitory
+      description: Requires dormitory guard to succeed plus dorm:update permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignDormitoryUserRequest'
+      responses:
+        '200':
+          description: User assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryResponse'
+
+  /dormitories/{id}/users/{user_id}:
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [dormitories]
+      summary: Remove user from dormitory
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DormitoryResponse'
+
+  /students:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: List students
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated student list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Create student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentRequest'
+      responses:
+        '201':
+          description: Student created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Student'
+
+  /students/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Get student detail
+      responses:
+        '200':
+          description: Student detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Student'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Update student profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentRequest'
+      responses:
+        '200':
+          description: Student updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Student'
+
+  /students/{id}/status:
+    patch:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Update student status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentStatusRequest'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Student'
+
+  /students/{id}/mutate-dormitory:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Mutate student dormitory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MutateStudentDormitoryRequest'
+      responses:
+        '200':
+          description: Dormitory mutation recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Student'
+
+  /students/{id}/sks-results:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: List SKS results for a student
+      parameters:
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: sks_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: SKS result list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSKSResultListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Record SKS result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentSKSResultRequest'
+      responses:
+        '201':
+          description: Result created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentSKSResult'
+
+  /students/{id}/sks-results/{result_id}:
+    put:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: Update SKS result
+      parameters:
+        - in: path
+          name: result_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentSKSResultRequest'
+      responses:
+        '200':
+          description: Result updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentSKSResult'
+
+  /students/{id}/fans:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [students]
+      summary: FAN completion summary for a student
+      responses:
+        '200':
+          description: Completion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FanCompletionListResponse'
+
+  /fans:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [fans]
+      summary: List FAN entities
+      responses:
+        '200':
+          description: Paginated FAN list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FanListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [fans]
+      summary: Create FAN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFanRequest'
+      responses:
+        '201':
+          description: FAN created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Fan'
+
+  /fans/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [fans]
+      summary: Get FAN detail
+      responses:
+        '200':
+          description: FAN detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Fan'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [fans]
+      summary: Update FAN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFanRequest'
+      responses:
+        '200':
+          description: FAN updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Fan'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [fans]
+      summary: Delete FAN
+      responses:
+        '204':
+          description: FAN deleted
+
+  /classes:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: List classes
+      parameters:
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated class list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Create class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
+      responses:
+        '201':
+          description: Class created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Class'
+
+  /classes/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Get class detail
+      responses:
+        '200':
+          description: Class detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Class'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Update class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassRequest'
+      responses:
+        '200':
+          description: Class updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Class'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Delete class
+      responses:
+        '204':
+          description: Class deleted
+
+  /classes/{id}/students:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Enroll student to class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollStudentRequest'
+      responses:
+        '200':
+          description: Enrollment updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Class'
+
+  /classes/{id}/staff:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [classes]
+      summary: Assign staff to class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignClassStaffRequest'
+      responses:
+        '200':
+          description: Staff assignment updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Class'
+
+  /teachers:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [teachers]
+      summary: List teachers
+      responses:
+        '200':
+          description: Paginated teacher list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [teachers]
+      summary: Create teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeacherRequest'
+      responses:
+        '201':
+          description: Teacher created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Teacher'
+
+  /teachers/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [teachers]
+      summary: Get teacher detail
+      responses:
+        '200':
+          description: Teacher detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Teacher'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [teachers]
+      summary: Update teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeacherRequest'
+      responses:
+        '200':
+          description: Teacher updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Teacher'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [teachers]
+      summary: Deactivate teacher
+      responses:
+        '204':
+          description: Teacher deactivated
+
+  /schedule-slots:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [schedule-slots]
+      summary: List schedule slots per dormitory
+      parameters:
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated schedule slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleSlotListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [schedule-slots]
+      summary: Create schedule slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleSlotRequest'
+      responses:
+        '201':
+          description: Slot created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleSlot'
+
+  /schedule-slots/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [schedule-slots]
+      summary: Get schedule slot detail
+      responses:
+        '200':
+          description: Slot detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleSlot'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [schedule-slots]
+      summary: Update schedule slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleSlotRequest'
+      responses:
+        '200':
+          description: Slot updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleSlot'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [schedule-slots]
+      summary: Delete schedule slot
+      responses:
+        '204':
+          description: Slot deleted
+
+  /class-schedules:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [class-schedules]
+      summary: List class schedules
+      parameters:
+        - in: query
+          name: class_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: teacher_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated class schedules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassScheduleListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [class-schedules]
+      summary: Create class schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassScheduleRequest'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSchedule'
+
+  /class-schedules/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [class-schedules]
+      summary: Get class schedule detail
+      responses:
+        '200':
+          description: Schedule detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSchedule'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [class-schedules]
+      summary: Update class schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassScheduleRequest'
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSchedule'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [class-schedules]
+      summary: Delete class schedule
+      responses:
+        '204':
+          description: Schedule deleted
+
+  /attendance-sessions:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [attendance]
+      summary: List attendance sessions
+      parameters:
+        - in: query
+          name: class_schedule_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: teacher_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: date
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attendance session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSessionListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [attendance]
+      summary: Open attendance sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAttendanceSessionRequest'
+      responses:
+        '201':
+          description: Sessions opened
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceSessionListResponse'
+
+  /attendance-sessions/{id}/students:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [attendance]
+      summary: Submit student attendance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitStudentAttendanceRequest'
+      responses:
+        '200':
+          description: Student attendance saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceSession'
+
+  /attendance-sessions/{id}/teacher:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [attendance]
+      summary: Submit teacher attendance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitTeacherAttendanceRequest'
+      responses:
+        '200':
+          description: Teacher attendance saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceSession'
+
+  /attendance-sessions/lock-day:
+    post:
+      security:
+        - bearerAuth: []
+      tags: [attendance]
+      summary: Lock sessions for a date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LockAttendanceRequest'
+      responses:
+        '200':
+          description: Sessions locked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceSessionListResponse'
+
+  /sks:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [sks-definitions]
+      summary: List SKS definitions
+      parameters:
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: subject_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated SKS definitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKSDefinitionListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [sks-definitions]
+      summary: Create SKS definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSKSDefinitionRequest'
+      responses:
+        '201':
+          description: SKS definition created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSDefinition'
+
+  /sks/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [sks-definitions]
+      summary: Get SKS definition detail
+      responses:
+        '200':
+          description: SKS definition detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSDefinition'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [sks-definitions]
+      summary: Update SKS definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSKSDefinitionRequest'
+      responses:
+        '200':
+          description: SKS definition updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSDefinition'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [sks-definitions]
+      summary: Delete SKS definition
+      responses:
+        '204':
+          description: SKS definition deleted
+
+  /sks-exams:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [sks-exams]
+      summary: List SKS exam schedules
+      parameters:
+        - in: query
+          name: sks_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated SKS exam schedules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKSExamListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [sks-exams]
+      summary: Create SKS exam schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSKSExamRequest'
+      responses:
+        '201':
+          description: SKS exam created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSExam'
+
+  /sks-exams/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      security:
+        - bearerAuth: []
+      tags: [sks-exams]
+      summary: Get SKS exam schedule detail
+      responses:
+        '200':
+          description: SKS exam detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSExam'
+    put:
+      security:
+        - bearerAuth: []
+      tags: [sks-exams]
+      summary: Update SKS exam schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSKSExamRequest'
+      responses:
+        '200':
+          description: SKS exam updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SKSExam'
+    delete:
+      security:
+        - bearerAuth: []
+      tags: [sks-exams]
+      summary: Delete SKS exam schedule
+      responses:
+        '204':
+          description: SKS exam deleted
+
+  /leave-permits:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [leave]
+      summary: List leave permits
+      parameters:
+        - in: query
+          name: student_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated leave permits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeavePermitListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [leave]
+      summary: Create leave permit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeavePermitRequest'
+      responses:
+        '201':
+          description: Leave permit created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeavePermit'
+
+  /leave-permits/{id}/approve:
+    put:
+      security:
+        - bearerAuth: []
+      tags: [leave]
+      summary: Approve leave permit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeavePermitStatusRequest'
+      responses:
+        '200':
+          description: Leave permit approved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeavePermit'
+
+  /leave-permits/{id}/reject:
+    put:
+      security:
+        - bearerAuth: []
+      tags: [leave]
+      summary: Reject leave permit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeavePermitStatusRequest'
+      responses:
+        '200':
+          description: Leave permit rejected
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeavePermit'
+
+  /leave-permits/{id}/complete:
+    put:
+      security:
+        - bearerAuth: []
+      tags: [leave]
+      summary: Complete leave permit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeavePermitStatusRequest'
+      responses:
+        '200':
+          description: Leave permit completed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeavePermit'
+
+  /health-statuses:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [health]
+      summary: List health statuses
+      parameters:
+        - in: query
+          name: student_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated health statuses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusListResponse'
+    post:
+      security:
+        - bearerAuth: []
+      tags: [health]
+      summary: Create health status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHealthStatusRequest'
+      responses:
+        '201':
+          description: Health status created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HealthStatus'
+
+  /health-statuses/{id}/revoke:
+    put:
+      security:
+        - bearerAuth: []
+      tags: [health]
+      summary: Revoke health status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeHealthStatusRequest'
+      responses:
+        '200':
+          description: Health status revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HealthStatus'
+
+  /reports/attendance/students:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: Student attendance report
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            description: YYYY-MM-DD
+          required: true
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+        - in: query
+          name: class_id
+          schema:
+            type: string
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attendance aggregates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AttendanceReportRow'
+
+  /reports/attendance/teachers:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: Teacher attendance report
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: slot_id
+          schema:
+            type: string
+        - in: query
+          name: teacher_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Teacher attendance aggregates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AttendanceReportRow'
+
+  /reports/leave-permits:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: Leave permit report
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+        - in: query
+          name: date_start
+          schema:
+            type: string
+        - in: query
+          name: date_end
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Leave report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaveReportRow'
+
+  /reports/health-statuses:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: Health status report
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+        - in: query
+          name: date_start
+          schema:
+            type: string
+        - in: query
+          name: date_end
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Health report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HealthReportRow'
+
+  /reports/sks:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: SKS performance report
+      parameters:
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+        - in: query
+          name: sks_id
+          schema:
+            type: string
+        - in: query
+          name: is_passed
+          schema:
+            type: boolean
+        - in: query
+          name: date_start
+          schema:
+            type: string
+        - in: query
+          name: date_end
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SKS report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SKSReportRow'
+
+  /reports/mutations:
+    get:
+      security:
+        - bearerAuth: []
+      tags: [reports]
+      summary: Mutation report
+      parameters:
+        - in: query
+          name: student_id
+          schema:
+            type: string
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+        - in: query
+          name: fan_id
+          schema:
+            type: string
+        - in: query
+          name: date_start
+          schema:
+            type: string
+        - in: query
+          name: date_end
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mutation report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MutationReportRow'
+
+tags:
+  - name: health
+    description: Service availability probe.
+  - name: auth
+    description: Authentication & token lifecycle endpoints.
+  - name: locations
+    description: Public geographic directory endpoints.
+  - name: permissions
+    description: Permission catalog for RBAC editors.
+  - name: users
+    description: User management endpoints.
+  - name: roles
+    description: Role lifecycle and permission assignment endpoints.
+  - name: dormitories
+    description: Dormitory management endpoints protected by guard middleware.
+  - name: students
+    description: Student lifecycle & SKS result endpoints.
+  - name: fans
+    description: FAN hierarchy management endpoints.
+  - name: classes
+    description: Class management and enrollment endpoints.
+  - name: teachers
+    description: Teacher directory endpoints.
+  - name: schedule-slots
+    description: Standardized schedule slot management per dormitory.
+  - name: class-schedules
+    description: Class scheduling endpoints referencing slots/manual times.
+  - name: attendance
+    description: Attendance session lifecycle (open, submit, lock).

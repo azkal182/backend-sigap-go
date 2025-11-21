@@ -8,7 +8,7 @@ TEST_PKGS := $(shell find . -name '*_test.go' -exec dirname {} \; | sort -u)
 # ==============================
 # PHONY targets
 # ==============================
-.PHONY: run seed build test cover test-report migrate-up migrate-down migrate-status migrate-to clean
+.PHONY: run seed build test cover test-report migrate-up migrate-down migrate-status migrate-to clean openapi-sync
 
 # ==============================
 # Run aplikasi
@@ -80,6 +80,17 @@ clean:
 	@echo "Cleaning project..."
 	rm -rf bin/
 	go clean
+
+# ==============================
+# OpenAPI sync placeholder (Phase 0)
+# ==============================
+openapi-sync:
+	@echo "Synchronizing OpenAPI docs..."
+	@[ -f docs/openapi.yaml ] || (echo "docs/openapi.yaml missing" && exit 1)
+	@[ -f docs/api_spec.md ] || (echo "docs/api_spec.md missing" && exit 1)
+	@which spectral >/dev/null 2>&1 || (echo "spectral CLI not installed" && exit 1)
+	@spectral lint docs/openapi.yaml
+	@git diff --quiet docs/openapi.yaml || (echo "openapi.yaml has uncommitted changes" && exit 1)
 
 
 # .PHONY: run build test migrate-up migrate-down clean

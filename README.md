@@ -246,6 +246,10 @@ go run cmd/main.go
 
 Server akan berjalan di `http://localhost:8080`
 
+### 8. OpenAPI Workflow (Kontributor)
+- Jalankan `make openapi-sync` sebelum push untuk memastikan `docs/openapi.yaml` valid menurut Spectral dan sudah di-commit.
+- CI (`.github/workflows/main.yml`) juga menjalankan lint yang sama, jadi pastikan lulus lokal agar pipeline tidak gagal.
+
 ## 📡 API Endpoints
 
 ### Authentication (Public)

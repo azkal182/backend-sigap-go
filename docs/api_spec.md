@@ -7,6 +7,8 @@ This document tracks endpoint specifications, sample requests/responses, and pha
 - **Authentication:** Bearer token via `Authorization: Bearer <token>` header.
 - **Content Type:** `application/json` unless stated otherwise.
 - **Pagination Pattern:** `?page=<n>&limit=<m>` or `?offset=<n>&limit=<m>` depending on handler (see individual sections).
+- **Canonical Spec:** `docs/openapi.yaml` (OpenAPI 3.1). Semua perubahan pada dokumen ini harus disinkronkan dengan file YAML tersebut agar tooling otomatis (lint, generator) tetap akurat.
+- **Quality Gate:** Jalankan `make openapi-sync` sebelum commit/push untuk memastikan `docs/openapi.yaml` lolos lint Spectral dan tidak ada perubahan lokal yang belum di-commit.
 
 ## 2. Documentation Tasks (Phase Plan)
 | Section | Status | Notes |
