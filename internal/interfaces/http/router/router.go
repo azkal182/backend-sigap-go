@@ -76,11 +76,15 @@ func SetupRouter(
 			students := protected.Group("/students")
 			{
 				students.GET("", authMiddleware.RequirePermission("student:read"), studentHandler.ListStudents)
-				students.GET("/:id", authMiddleware.RequirePermission("student:read"), studentHandler.GetStudent)
+				students.GET(":id", authMiddleware.RequirePermission("student:read"), studentHandler.GetStudent)
 				students.POST("", authMiddleware.RequirePermission("student:create"), studentHandler.CreateStudent)
-				students.PUT("/:id", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudent)
-				students.PATCH("/:id/status", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudentStatus)
-				students.POST("/:id/mutate-dormitory", authMiddleware.RequirePermission("student:update"), studentHandler.MutateStudentDormitory)
+				students.PUT(":id", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudent)
+				students.PATCH(":id/status", authMiddleware.RequirePermission("student:update"), studentHandler.UpdateStudentStatus)
+				students.POST(":id/mutate-dormitory", authMiddleware.RequirePermission("student:update"), studentHandler.MutateStudentDormitory)
+				students.POST(":id/sks-results", authMiddleware.RequirePermission("student_sks_results:create"), studentHandler.CreateStudentSKSResult)
+				students.PUT(":id/sks-results/:result_id", authMiddleware.RequirePermission("student_sks_results:update"), studentHandler.UpdateStudentSKSResult)
+				students.GET(":id/sks-results", authMiddleware.RequirePermission("student_sks_results:read"), studentHandler.ListStudentSKSResults)
+				students.GET(":id/fans", authMiddleware.RequirePermission("student_sks_results:read"), studentHandler.ListFanCompletionStatuses)
 			}
 
 			// User routes

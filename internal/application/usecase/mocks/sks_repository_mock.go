@@ -49,6 +49,12 @@ func (m *SKSDefinitionRepositoryMock) List(ctx context.Context, fanID uuid.UUID,
 	return defs, total, args.Error(2)
 }
 
+func (m *SKSDefinitionRepositoryMock) CountByFan(ctx context.Context, fanID uuid.UUID) (int64, error) {
+	args := m.Called(ctx, fanID)
+	total := args.Get(0).(int64)
+	return total, args.Error(1)
+}
+
 func (m *SKSDefinitionRepositoryMock) Delete(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)

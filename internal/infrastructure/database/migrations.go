@@ -338,4 +338,21 @@ func init() {
 			)
 		},
 	)
+
+	RegisterMigration(
+		"012_create_student_sks_results",
+		"Create student_sks_results and fan_completion_status tables",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.StudentSKSResult{},
+				&entity.FanCompletionStatus{},
+			)
+		},
+		func(db *gorm.DB) error {
+			if err := db.Migrator().DropTable(&entity.FanCompletionStatus{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&entity.StudentSKSResult{})
+		},
+	)
 }

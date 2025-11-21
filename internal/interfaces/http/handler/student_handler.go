@@ -14,12 +14,105 @@ import (
 
 // StudentHandler manages student HTTP endpoints.
 type StudentHandler struct {
-	studentUseCase *usecase.StudentUseCase
+	studentUseCase   *usecase.StudentUseCase
+	sksResultUseCase *usecase.StudentSKSResultUseCase
+}
+
+// CreateStudentSKSResult handles POST /api/students/:id/sks-results.
+func (h *StudentHandler) CreateStudentSKSResult(c *gin.Context) {
+	studentID := c.Param("id")
+	var req dto.CreateStudentSKSResultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorValidation(c, err)
+		return
+	}
+	req.StudentID = studentID
+	result, err := h.sksResultUseCase.CreateStudentSKSResult(c.Request.Context(), req)
+	if err != nil {
+		h.handleSKSError(c, err, "create")
+		return
+	}
+	response.SuccessCreated(c, result, "Student SKS result created successfully")
+}
+
+// UpdateStudentSKSResult handles PUT /api/students/:id/sks-results/:result_id.
+func (h *StudentHandler) UpdateStudentSKSResult(c *gin.Context) {
+	resultID, err := uuid.Parse(c.Param("result_id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid SKS result ID", err.Error())
+		return
+	}
+	var req dto.UpdateStudentSKSResultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorValidation(c, err)
+		return
+	}
+	result, err := h.sksResultUseCase.UpdateStudentSKSResult(c.Request.Context(), resultID, req)
+	if err != nil {
+		h.handleSKSError(c, err, "update")
+		return
+	}
+	response.SuccessOK(c, result, "Student SKS result updated successfully")
+}
+
+// ListStudentSKSResults handles GET /api/students/:id/sks-results.
+func (h *StudentHandler) ListStudentSKSResults(c *gin.Context) {
+	studentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid student ID", err.Error())
+		return
+	}
+	fanID := c.Query("fan_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	results, err := h.sksResultUseCase.ListStudentSKSResults(c.Request.Context(), studentID, fanID, page, pageSize)
+	if err != nil {
+		h.handleSKSError(c, err, "list")
+		return
+	}
+
+	response.SuccessOK(c, results, "Student SKS results retrieved successfully")
+}
+
+// ListFanCompletionStatuses handles GET /api/students/:id/fans.
+func (h *StudentHandler) ListFanCompletionStatuses(c *gin.Context) {
+	studentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ErrorBadRequest(c, "Invalid student ID", err.Error())
+		return
+	}
+	statuses, err := h.sksResultUseCase.ListFanCompletionStatuses(c.Request.Context(), studentID)
+	if err != nil {
+		h.handleSKSError(c, err, "list")
+		return
+	}
+	response.SuccessOK(c, statuses, "Student FAN completion statuses retrieved successfully")
+}
+
+func (h *StudentHandler) handleSKSError(c *gin.Context, err error, action string) {
+	switch err {
+	case domainErrors.ErrStudentNotFound:
+		response.ErrorNotFound(c, "Student not found")
+	case domainErrors.ErrSKSDefinitionNotFound:
+		response.ErrorNotFound(c, "SKS definition not found")
+	case domainErrors.ErrStudentSKSResultNotFound:
+		response.ErrorNotFound(c, "Student SKS result not found")
+	case domainErrors.ErrTeacherNotFound:
+		response.ErrorNotFound(c, "Teacher not found")
+	case domainErrors.ErrBadRequest:
+		response.ErrorBadRequest(c, "Invalid SKS result data", err.Error())
+	default:
+		response.ErrorInternalServer(c, "Failed to "+action+" student SKS result", err.Error())
+	}
 }
 
 // NewStudentHandler constructs StudentHandler.
-func NewStudentHandler(studentUseCase *usecase.StudentUseCase) *StudentHandler {
-	return &StudentHandler{studentUseCase: studentUseCase}
+func NewStudentHandler(studentUseCase *usecase.StudentUseCase, sksResultUseCase *usecase.StudentSKSResultUseCase) *StudentHandler {
+	return &StudentHandler{
+		studentUseCase:   studentUseCase,
+		sksResultUseCase: sksResultUseCase,
+	}
 }
 
 // CreateStudent handles POST /api/students

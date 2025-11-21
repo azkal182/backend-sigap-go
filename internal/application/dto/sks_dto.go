@@ -83,3 +83,51 @@ type ListSKSExamSchedulesResponse struct {
 	PageSize   int                       `json:"page_size"`
 	TotalPages int                       `json:"total_pages"`
 }
+
+// CreateStudentSKSResultRequest represents payload for recording a student's SKS outcome.
+type CreateStudentSKSResultRequest struct {
+	StudentID  string  `json:"student_id" binding:"required,uuid4"`
+	SKSID      string  `json:"sks_id" binding:"required,uuid4"`
+	Score      float64 `json:"score" binding:"required,gte=0"`
+	IsPassed   *bool   `json:"is_passed" binding:"omitempty"`
+	ExamDate   *string `json:"exam_date" binding:"omitempty"`
+	ExaminerID *string `json:"examiner_id" binding:"omitempty,uuid4"`
+}
+
+// UpdateStudentSKSResultRequest updates existing SKS result records.
+type UpdateStudentSKSResultRequest struct {
+	Score      *float64 `json:"score" binding:"omitempty,gte=0"`
+	IsPassed   *bool    `json:"is_passed" binding:"omitempty"`
+	ExamDate   *string  `json:"exam_date" binding:"omitempty"`
+	ExaminerID *string  `json:"examiner_id" binding:"omitempty,uuid4"`
+}
+
+// StudentSKSResultResponse represents SKS exam result data returned to clients.
+type StudentSKSResultResponse struct {
+	ID         string  `json:"id"`
+	StudentID  string  `json:"student_id"`
+	FanID      string  `json:"fan_id"`
+	SKSID      string  `json:"sks_id"`
+	Score      float64 `json:"score"`
+	IsPassed   bool    `json:"is_passed"`
+	ExamDate   *string `json:"exam_date"`
+	ExaminerID *string `json:"examiner_id"`
+	CreatedAt  string  `json:"created_at"`
+	UpdatedAt  string  `json:"updated_at"`
+}
+
+// ListStudentSKSResultsResponse wraps paginated SKS result data for a student.
+type ListStudentSKSResultsResponse struct {
+	Results    []StudentSKSResultResponse `json:"results"`
+	Total      int64                      `json:"total"`
+	Page       int                        `json:"page"`
+	PageSize   int                        `json:"page_size"`
+	TotalPages int                        `json:"total_pages"`
+}
+
+// FanCompletionStatusResponse summarizes per-FAN completion for a student.
+type FanCompletionStatusResponse struct {
+	FanID       string  `json:"fan_id"`
+	IsCompleted bool    `json:"is_completed"`
+	CompletedAt *string `json:"completed_at"`
+}

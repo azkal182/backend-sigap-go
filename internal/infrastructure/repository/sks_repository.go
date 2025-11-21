@@ -19,6 +19,18 @@ type sksDefinitionRepository struct {
 	db *gorm.DB
 }
 
+func (r *sksDefinitionRepository) CountByFan(ctx context.Context, fanID uuid.UUID) (int64, error) {
+	var total int64
+	query := r.db.WithContext(ctx).Model(&entity.SKSDefinition{})
+	if fanID != uuid.Nil {
+		query = query.Where("fan_id = ?", fanID)
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
 type sksExamScheduleRepository struct {
 	db *gorm.DB
 }

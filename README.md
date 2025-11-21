@@ -33,11 +33,12 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 - ✅ Assign/Remove staff ke dormitory via endpoint khusus
 - ✅ Setiap dormitory dapat dibatasi akses berdasarkan guard
 
-### 5. Student Management (CRUD Students)
+### 5. Student Management (CRUD Students + SKS Results)
 - ✅ CRUD santri dengan atribut `student_number`, `full_name`, `birth_date`, `gender`, `parent_name`, status aktif
 - ✅ Patch status (`active`, `inactive`, `leave`, `graduated`) via endpoint khusus
 - ✅ Mutasi asrama (riwayat `student_dormitory_history`) dengan audit logging
-- ✅ Endpoint terproteksi permission `student:*`
+- ✅ Rekam hasil ujian SKS per santri dan pantau status kelulusan FAN secara otomatis
+- ✅ Endpoint terproteksi permission `student:*` dan `student_sks_results:*`
 
 ### 6. Guard / Access Control
 - ✅ Guard menentukan batas akses user terhadap dormitory:
@@ -333,6 +334,10 @@ Server akan berjalan di `http://localhost:8080`
 - `PUT /api/students/:id` - Update student (requires `student:update`)
 - `PATCH /api/students/:id/status` - Update lifecycle status (requires `student:update`)
 - `POST /api/students/:id/mutate-dormitory` - Mutate dormitory assignment and log history (requires `student:update`)
+- `POST /api/students/:id/sks-results` - Record SKS result for a student (requires `student_sks_results:create`)
+- `PUT /api/students/:id/sks-results/:result_id` - Update recorded SKS result (requires `student_sks_results:update`)
+- `GET /api/students/:id/sks-results` - List SKS results for a student with pagination/filter per FAN (requires `student_sks_results:read`)
+- `GET /api/students/:id/fans` - View FAN completion status derived from SKS results (requires `student_sks_results:read`)
 
 ### Health Check
 - `GET /health` - Health check endpoint

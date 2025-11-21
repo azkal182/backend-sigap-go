@@ -90,6 +90,10 @@ func main() {
 		{ID: uuid.New(), Name: "sks_exams:create", Slug: "sks-exams-create", Resource: "sks_exams", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "sks_exams:update", Slug: "sks-exams-update", Resource: "sks_exams", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "sks_exams:delete", Slug: "sks-exams-delete", Resource: "sks_exams", Action: "delete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Student SKS results & FAN completion permissions
+		{ID: uuid.New(), Name: "student_sks_results:read", Slug: "student-sks-results-read", Resource: "student_sks_results", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "student_sks_results:create", Slug: "student-sks-results-create", Resource: "student_sks_results", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "student_sks_results:update", Slug: "student-sks-results-update", Resource: "student_sks_results", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -209,6 +213,7 @@ func main() {
 				*permissions[31], *permissions[32], *permissions[33], *permissions[34], // class schedules:*
 				*permissions[35], *permissions[36], *permissions[37], *permissions[38], // sks definitions:*
 				*permissions[39], *permissions[40], *permissions[41], *permissions[42], // sks exams:*
+				*permissions[43], *permissions[44], *permissions[45], // student sks results:*
 			},
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {

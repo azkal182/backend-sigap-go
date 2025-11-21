@@ -14,6 +14,7 @@ type SKSDefinitionRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.SKSDefinition, error)
 	GetByCode(ctx context.Context, code string) (*entity.SKSDefinition, error)
 	List(ctx context.Context, fanID uuid.UUID, limit, offset int) ([]*entity.SKSDefinition, int64, error)
+	CountByFan(ctx context.Context, fanID uuid.UUID) (int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 

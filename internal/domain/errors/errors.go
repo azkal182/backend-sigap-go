@@ -57,6 +57,7 @@ var (
 	ErrSKSDefinitionNotFound     = errors.New("sks definition not found")
 	ErrSKSDefinitionAlreadyExist = errors.New("sks definition already exists")
 	ErrSKSExamScheduleNotFound   = errors.New("sks exam schedule not found")
+	ErrStudentSKSResultNotFound  = errors.New("student sks result not found")
 
 	// Class errors
 	ErrClassNotFound          = errors.New("class not found")

@@ -19,6 +19,116 @@ func (n *noopAuditLogger) Log(ctx context.Context, resource, action, targetID st
 	return nil
 }
 
+func TestUserUseCase_AssignRoleToUser(t *testing.T) {
+	userID := uuid.New()
+	roleID := uuid.New()
+
+	tests := []struct {
+		name          string
+		setupMocks    func(*mocks.MockUserRepository, *mocks.MockRoleRepository)
+		expectedError error
+	}{
+		{
+			name: "success",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+				roleRepo.On("GetByID", mock.Anything, roleID).Return(&entity.Role{ID: roleID}, nil)
+				userRepo.On("AssignRole", mock.Anything, userID, roleID).Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name: "user not found",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(nil, domainErrors.ErrUserNotFound)
+			},
+			expectedError: domainErrors.ErrUserNotFound,
+		},
+		{
+			name: "role not found",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+				roleRepo.On("GetByID", mock.Anything, roleID).Return(nil, domainErrors.ErrRoleNotFound)
+			},
+			expectedError: domainErrors.ErrRoleNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userRepo := new(mocks.MockUserRepository)
+			roleRepo := new(mocks.MockRoleRepository)
+			tt.setupMocks(userRepo, roleRepo)
+			uc := NewUserUseCase(userRepo, roleRepo, &noopAuditLogger{})
+			err := uc.AssignRoleToUser(context.Background(), userID, roleID)
+
+			if tt.expectedError != nil {
+				assert.ErrorIs(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			userRepo.AssertExpectations(t)
+			roleRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUserUseCase_RemoveRoleFromUser(t *testing.T) {
+	userID := uuid.New()
+	roleID := uuid.New()
+
+	tests := []struct {
+		name          string
+		setupMocks    func(*mocks.MockUserRepository, *mocks.MockRoleRepository)
+		expectedError error
+	}{
+		{
+			name: "success",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+				roleRepo.On("GetByID", mock.Anything, roleID).Return(&entity.Role{ID: roleID}, nil)
+				userRepo.On("RemoveRole", mock.Anything, userID, roleID).Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name: "user not found",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(nil, domainErrors.ErrUserNotFound)
+			},
+			expectedError: domainErrors.ErrUserNotFound,
+		},
+		{
+			name: "role not found",
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID}, nil)
+				roleRepo.On("GetByID", mock.Anything, roleID).Return(nil, domainErrors.ErrRoleNotFound)
+			},
+			expectedError: domainErrors.ErrRoleNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userRepo := new(mocks.MockUserRepository)
+			roleRepo := new(mocks.MockRoleRepository)
+			tt.setupMocks(userRepo, roleRepo)
+			uc := NewUserUseCase(userRepo, roleRepo, &noopAuditLogger{})
+			err := uc.RemoveRoleFromUser(context.Background(), userID, roleID)
+
+			if tt.expectedError != nil {
+				assert.ErrorIs(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			userRepo.AssertExpectations(t)
+			roleRepo.AssertExpectations(t)
+		})
+	}
+}
+
 func TestUserUseCase_CreateUser(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -246,6 +356,27 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 				}, nil)
 			},
 			expectedError: domainErrors.ErrUserAlreadyExists,
+		},
+		{
+			name:   "failure - repository update error",
+			userID: userID,
+			req:    dto.UpdateUserRequest{Name: "New Name"},
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID, Username: "user"}, nil)
+				userRepo.On("Update", mock.Anything, mock.Anything).Return(assert.AnError)
+			},
+			expectedError: domainErrors.ErrInternalServer,
+		},
+		{
+			name:   "failure - GetWithRoles error",
+			userID: userID,
+			req:    dto.UpdateUserRequest{Name: "Another Name"},
+			setupMocks: func(userRepo *mocks.MockUserRepository, roleRepo *mocks.MockRoleRepository) {
+				userRepo.On("GetByID", mock.Anything, userID).Return(&entity.User{ID: userID, Username: "user"}, nil)
+				userRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+				userRepo.On("GetWithRoles", mock.Anything, userID).Return(nil, assert.AnError)
+			},
+			expectedError: domainErrors.ErrInternalServer,
 		},
 	}
 

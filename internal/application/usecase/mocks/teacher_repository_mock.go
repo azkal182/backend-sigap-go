@@ -16,6 +16,9 @@ type MockTeacherRepository struct {
 
 var _ repository.TeacherRepository = (*MockTeacherRepository)(nil)
 
+// TeacherRepositoryMock keeps backward compatibility with tests referencing the old name.
+type TeacherRepositoryMock = MockTeacherRepository
+
 func (m *MockTeacherRepository) Create(ctx context.Context, teacher *entity.Teacher) error {
 	args := m.Called(ctx, teacher)
 	return args.Error(0)
