@@ -8,6 +8,7 @@ import (
 )
 
 // SetupRouter configures all routes
+
 func SetupRouter(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
@@ -25,6 +26,8 @@ func SetupRouter(
 	sksExamHandler *handler.SKSExamScheduleHandler,
 	attendanceHandler *handler.AttendanceHandler,
 	scheduleSlotHandler *handler.ScheduleSlotHandler,
+	leavePermitHandler *handler.LeavePermitHandler,
+	healthStatusHandler *handler.HealthStatusHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -160,6 +163,24 @@ func SetupRouter(
 				teachers.POST("", authMiddleware.RequirePermission("teachers:create"), teacherHandler.CreateTeacher)
 				teachers.PUT(":id", authMiddleware.RequirePermission("teachers:update"), teacherHandler.UpdateTeacher)
 				teachers.DELETE(":id", authMiddleware.RequirePermission("teachers:delete"), teacherHandler.DeactivateTeacher)
+			}
+
+			// Leave permit routes
+			leavePermits := protected.Group("/leave-permits")
+			{
+				leavePermits.GET("", authMiddleware.RequirePermission("leave_permits:read"), leavePermitHandler.ListLeavePermits)
+				leavePermits.POST("", authMiddleware.RequirePermission("leave_permits:create"), leavePermitHandler.CreateLeavePermit)
+				leavePermits.PUT(":id/approve", authMiddleware.RequirePermission("leave_permits:approve"), leavePermitHandler.ApproveLeavePermit)
+				leavePermits.PUT(":id/reject", authMiddleware.RequirePermission("leave_permits:approve"), leavePermitHandler.RejectLeavePermit)
+				leavePermits.PUT(":id/complete", authMiddleware.RequirePermission("leave_permits:complete"), leavePermitHandler.CompleteLeavePermit)
+			}
+
+			// Health status routes
+			healthStatuses := protected.Group("/health-statuses")
+			{
+				healthStatuses.GET("", authMiddleware.RequirePermission("health_statuses:read"), healthStatusHandler.ListHealthStatuses)
+				healthStatuses.POST("", authMiddleware.RequirePermission("health_statuses:create"), healthStatusHandler.CreateHealthStatus)
+				healthStatuses.PUT(":id/revoke", authMiddleware.RequirePermission("health_statuses:revoke"), healthStatusHandler.RevokeHealthStatus)
 			}
 
 			// Schedule slot routes

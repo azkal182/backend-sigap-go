@@ -376,4 +376,21 @@ func init() {
 			return db.Migrator().DropTable(&entity.AttendanceSession{})
 		},
 	)
+
+	RegisterMigration(
+		"014_create_leave_health_tables",
+		"Create leave_permits and health_statuses tables",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.LeavePermit{},
+				&entity.HealthStatus{},
+			)
+		},
+		func(db *gorm.DB) error {
+			if err := db.Migrator().DropTable(&entity.HealthStatus{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&entity.LeavePermit{})
+		},
+	)
 }

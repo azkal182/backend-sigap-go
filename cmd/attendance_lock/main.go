@@ -37,10 +37,15 @@ func main() {
 	studentAttendanceRepo := infraRepo.NewStudentAttendanceRepository()
 	teacherAttendanceRepo := infraRepo.NewTeacherAttendanceRepository()
 	classScheduleRepo := infraRepo.NewClassScheduleRepository()
+	leavePermitRepo := infraRepo.NewLeavePermitRepository()
+	healthStatusRepo := infraRepo.NewHealthStatusRepository()
+	studentRepo := infraRepo.NewStudentRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 
 	auditLogger := service.NewAuditLogger(auditLogRepo)
-	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, auditLogger)
+	leavePermitUseCase := usecase.NewLeavePermitUseCase(leavePermitRepo, studentRepo, auditLogger)
+	healthStatusUseCase := usecase.NewHealthStatusUseCase(healthStatusRepo, studentRepo, auditLogger)
+	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, leavePermitUseCase, healthStatusUseCase, auditLogger)
 
 	req := dto.LockAttendanceRequest{Date: dateInput}
 	if err := attendanceUseCase.LockSessions(ctx, req); err != nil {

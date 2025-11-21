@@ -36,6 +36,113 @@ type testUserRepository struct {
 	db *gorm.DB
 }
 
+func TestAttendanceSubmitStudentEndpoint_WithHealthOverride(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Attendance Health Dorm")
+	student := seedStudent(t, db, "Health Override Student")
+	user, token := createTestUser(t, db, "attendance-health", tokenService, "attendance_sessions:update")
+	assignPermissionsToUser(t, db, user.ID, []string{"attendance_sessions:update"})
+
+	healthStatus := entity.HealthStatus{
+		ID:        uuid.New(),
+		StudentID: student.ID,
+		Diagnosis: "Flu",
+		StartDate: time.Now().Add(-24 * time.Hour),
+		Status:    entity.HealthStatusStateActive,
+		CreatedBy: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	require.NoError(t, db.Create(&healthStatus).Error)
+
+	classEntity := seedClass(t, db, seedFan(t, db).ID)
+	teacher := seedTeacher(t, db)
+	schedule := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+	session := entity.AttendanceSession{
+		ID:              uuid.New(),
+		ClassScheduleID: schedule.ID,
+		TeacherID:       teacher.ID,
+		Date:            time.Now(),
+		Status:          entity.AttendanceSessionStatusOpen,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+	require.NoError(t, db.Create(&session).Error)
+
+	payload := dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{
+			{StudentID: student.ID.String(), Status: string(entity.StudentAttendancePresent)},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance-sessions/"+session.ID.String()+"/students", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+
+	var record entity.StudentAttendance
+	require.NoError(t, db.Where("attendance_session_id = ? AND student_id = ?", session.ID, student.ID).First(&record).Error)
+	assert.Equal(t, entity.StudentAttendanceSick, record.Status)
+}
+
+func TestAttendanceSubmitStudentEndpoint_WithLeaveOverride(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Attendance Leave Dorm")
+	student := seedStudent(t, db, "Leave Override Student")
+	user, token := createTestUser(t, db, "attendance-leave", tokenService, "attendance_sessions:update")
+	assignPermissionsToUser(t, db, user.ID, []string{"attendance_sessions:update"})
+
+	leavePermit := entity.LeavePermit{
+		ID:        uuid.New(),
+		StudentID: student.ID,
+		Type:      entity.LeavePermitTypeOfficialDuty,
+		StartDate: time.Now().Add(-24 * time.Hour),
+		EndDate:   time.Now().Add(24 * time.Hour),
+		Status:    entity.LeavePermitStatusApproved,
+		CreatedBy: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	require.NoError(t, db.Create(&leavePermit).Error)
+
+	classEntity := seedClass(t, db, seedFan(t, db).ID)
+	teacher := seedTeacher(t, db)
+	schedule := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+	session := entity.AttendanceSession{
+		ID:              uuid.New(),
+		ClassScheduleID: schedule.ID,
+		TeacherID:       teacher.ID,
+		Date:            time.Now(),
+		Status:          entity.AttendanceSessionStatusOpen,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+	require.NoError(t, db.Create(&session).Error)
+
+	payload := dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{
+			{StudentID: student.ID.String(), Status: string(entity.StudentAttendanceAbsent)},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance-sessions/"+session.ID.String()+"/students", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+
+	var record entity.StudentAttendance
+	require.NoError(t, db.Where("attendance_session_id = ? AND student_id = ?", session.ID, student.ID).First(&record).Error)
+	assert.Equal(t, entity.StudentAttendancePermit, record.Status)
+}
+
 func TestAttendanceOpenSessionsEndpoint(t *testing.T) {
 	router, db, tokenService, cleanup := setupTestRouter(t)
 	defer cleanup()
@@ -863,6 +970,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	teacherRepo := infraRepo.NewTeacherRepository()
 	subjectRepo := infraRepo.NewSubjectRepository()
 	classScheduleRepo := infraRepo.NewClassScheduleRepository()
+	leavePermitRepo := infraRepo.NewLeavePermitRepository()
+	healthStatusRepo := infraRepo.NewHealthStatusRepository()
 	sksDefinitionRepo := infraRepo.NewSKSDefinitionRepository()
 	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
 	scheduleSlotRepo := infraRepo.NewScheduleSlotRepository()
@@ -894,7 +1003,9 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	attendanceSessionRepo := infraRepo.NewAttendanceSessionRepository()
 	studentAttendanceRepo := infraRepo.NewStudentAttendanceRepository()
 	teacherAttendanceRepo := infraRepo.NewTeacherAttendanceRepository()
-	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, auditLogger)
+	leavePermitUseCase := usecase.NewLeavePermitUseCase(leavePermitRepo, studentRepo, auditLogger)
+	healthStatusUseCase := usecase.NewHealthStatusUseCase(healthStatusRepo, studentRepo, auditLogger)
+	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, leavePermitUseCase, healthStatusUseCase, auditLogger)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -913,6 +1024,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
 	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
 	attendanceHandler := handler.NewAttendanceHandler(attendanceUseCase)
+	leavePermitHandler := handler.NewLeavePermitHandler(leavePermitUseCase)
+	healthStatusHandler := handler.NewHealthStatusHandler(healthStatusUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
@@ -939,6 +1052,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 		sksExamHandler,
 		attendanceHandler,
 		scheduleSlotHandler,
+		leavePermitHandler,
+		healthStatusHandler,
 		authMiddleware,
 	)
 

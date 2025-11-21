@@ -30,6 +30,14 @@ func mustPermission(perms []*entity.Permission, name string) *entity.Permission 
 	return perm
 }
 
+func copyPermissions(perms []*entity.Permission) []entity.Permission {
+	cloned := make([]entity.Permission, 0, len(perms))
+	for _, perm := range perms {
+		cloned = append(cloned, *perm)
+	}
+	return cloned
+}
+
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -116,6 +124,15 @@ func main() {
 		{ID: uuid.New(), Name: "attendance_sessions:create", Slug: "attendance-sessions-create", Resource: "attendance_sessions", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "attendance_sessions:update", Slug: "attendance-sessions-update", Resource: "attendance_sessions", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "attendance_sessions:lock", Slug: "attendance-sessions-lock", Resource: "attendance_sessions", Action: "lock", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Leave permit permissions
+		{ID: uuid.New(), Name: "leave_permits:read", Slug: "leave-permits-read", Resource: "leave_permits", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "leave_permits:create", Slug: "leave-permits-create", Resource: "leave_permits", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "leave_permits:approve", Slug: "leave-permits-approve", Resource: "leave_permits", Action: "approve", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "leave_permits:complete", Slug: "leave-permits-complete", Resource: "leave_permits", Action: "complete", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Health status permissions
+		{ID: uuid.New(), Name: "health_statuses:read", Slug: "health-statuses-read", Resource: "health_statuses", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "health_statuses:create", Slug: "health-statuses-create", Resource: "health_statuses", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "health_statuses:revoke", Slug: "health-statuses-revoke", Resource: "health_statuses", Action: "revoke", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -228,21 +245,7 @@ func main() {
 			IsProtected: true,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
-			Permissions: []entity.Permission{
-				*permissions[0], *permissions[1], *permissions[2], *permissions[3], // user:*
-				*permissions[4], *permissions[5], *permissions[6], *permissions[7], // dorm:*
-				*permissions[8], *permissions[9], *permissions[10], *permissions[11], // role:*
-				*permissions[12], *permissions[13], *permissions[14], // student:*
-				*permissions[15], *permissions[16], *permissions[17], *permissions[18], // fans:*
-				*permissions[19], *permissions[20], *permissions[21], *permissions[22], // classes:*
-				*permissions[23], *permissions[24], *permissions[25], *permissions[26], // teachers:*
-				*permissions[27], *permissions[28], *permissions[29], *permissions[30], // schedule slots:*
-				*permissions[31], *permissions[32], *permissions[33], *permissions[34], // class schedules:*
-				*permissions[35], *permissions[36], *permissions[37], *permissions[38], // sks definitions:*
-				*permissions[39], *permissions[40], *permissions[41], *permissions[42], // sks exams:*
-				*permissions[43], *permissions[44], *permissions[45], // student sks results:*
-				*attendanceReadPerm, *attendanceCreatePerm, *attendanceUpdatePerm, *attendanceLockPerm, // attendance
-			},
+			Permissions: copyPermissions(permissions),
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {
 			log.Printf("Failed to create admin role: %v", err)
@@ -269,12 +272,7 @@ func main() {
 			IsProtected: true,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
-			Permissions: []entity.Permission{
-				*permissions[0], *permissions[1], *permissions[2], *permissions[3], // user:*
-				*permissions[4], *permissions[5], *permissions[6], *permissions[7], // dorm:*
-				*permissions[8], *permissions[9], *permissions[10], *permissions[11], // role:*
-				*permissions[12], *permissions[13], *permissions[14], // student:*
-			},
+			Permissions: copyPermissions(permissions),
 		}
 		if err := roleRepo.Create(ctx, superAdminRole); err != nil {
 			log.Printf("Failed to create super admin role: %v", err)

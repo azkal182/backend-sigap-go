@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,12 +16,69 @@ import (
 	"github.com/your-org/go-backend-starter/internal/domain/repository"
 )
 
+type leavePermitStatusProvider interface {
+	GetActivePermitForDate(ctx context.Context, studentID uuid.UUID, date time.Time) (*entity.LeavePermit, error)
+}
+
+func (uc *AttendanceUseCase) getDerivedStatus(
+	ctx context.Context,
+	studentID uuid.UUID,
+	date time.Time,
+	cache map[uuid.UUID]derivedStatusCacheEntry,
+) (derivedStatusCacheEntry, error) {
+	if entry, ok := cache[studentID]; ok {
+		return entry, nil
+	}
+
+	result := derivedStatusCacheEntry{}
+
+	if uc.healthStatusProvider != nil {
+		record, err := uc.healthStatusProvider.GetActiveHealthStatusForDate(ctx, studentID, date)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return result, domainErrors.ErrInternalServer
+		}
+		if record != nil {
+			result.override = true
+			result.status = entity.StudentAttendanceSick
+			cache[studentID] = result
+			return result, nil
+		}
+	}
+
+	if uc.leavePermitProvider != nil {
+		record, err := uc.leavePermitProvider.GetActivePermitForDate(ctx, studentID, date)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return result, domainErrors.ErrInternalServer
+		}
+		if record != nil {
+			result.override = true
+			result.status = entity.StudentAttendancePermit
+			cache[studentID] = result
+			return result, nil
+		}
+	}
+
+	cache[studentID] = result
+	return result, nil
+}
+
+type healthStatusProvider interface {
+	GetActiveHealthStatusForDate(ctx context.Context, studentID uuid.UUID, date time.Time) (*entity.HealthStatus, error)
+}
+
+type derivedStatusCacheEntry struct {
+	override bool
+	status   entity.StudentAttendanceStatus
+}
+
 // AttendanceUseCase orchestrates attendance operations.
 type AttendanceUseCase struct {
 	sessionRepo           repository.AttendanceSessionRepository
 	studentAttendanceRepo repository.StudentAttendanceRepository
 	teacherAttendanceRepo repository.TeacherAttendanceRepository
 	classScheduleRepo     repository.ClassScheduleRepository
+	leavePermitProvider   leavePermitStatusProvider
+	healthStatusProvider  healthStatusProvider
 	auditLogger           appService.AuditLogger
 }
 
@@ -30,6 +88,8 @@ func NewAttendanceUseCase(
 	studentAttendanceRepo repository.StudentAttendanceRepository,
 	teacherAttendanceRepo repository.TeacherAttendanceRepository,
 	classScheduleRepo repository.ClassScheduleRepository,
+	leavePermitProvider leavePermitStatusProvider,
+	healthStatusProvider healthStatusProvider,
 	auditLogger appService.AuditLogger,
 ) *AttendanceUseCase {
 	return &AttendanceUseCase{
@@ -37,6 +97,8 @@ func NewAttendanceUseCase(
 		studentAttendanceRepo: studentAttendanceRepo,
 		teacherAttendanceRepo: teacherAttendanceRepo,
 		classScheduleRepo:     classScheduleRepo,
+		leavePermitProvider:   leavePermitProvider,
+		healthStatusProvider:  healthStatusProvider,
 		auditLogger:           auditLogger,
 	}
 }
@@ -115,6 +177,7 @@ func (uc *AttendanceUseCase) SubmitStudentAttendance(ctx context.Context, sessio
 
 	now := time.Now()
 	attendances := make([]*entity.StudentAttendance, 0, len(req.Records))
+	derivedCache := make(map[uuid.UUID]derivedStatusCacheEntry)
 	for _, record := range req.Records {
 		studentID, err := uuid.Parse(record.StudentID)
 		if err != nil {
@@ -123,6 +186,16 @@ func (uc *AttendanceUseCase) SubmitStudentAttendance(ctx context.Context, sessio
 		status, err := mapStudentStatus(record.Status)
 		if err != nil {
 			return err
+		}
+
+		if uc.leavePermitProvider != nil || uc.healthStatusProvider != nil {
+			entry, err := uc.getDerivedStatus(ctx, studentID, session.Date, derivedCache)
+			if err != nil {
+				return err
+			}
+			if entry.override {
+				status = entry.status
+			}
 		}
 		attendances = append(attendances, &entity.StudentAttendance{
 			ID:                  uuid.New(),

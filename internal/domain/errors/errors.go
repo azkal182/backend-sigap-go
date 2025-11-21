@@ -64,6 +64,14 @@ var (
 	ErrAttendanceAlreadyLocked   = errors.New("attendance session already locked")
 	ErrAttendanceInvalidStatus   = errors.New("invalid attendance status")
 
+	// Leave/health errors
+	ErrLeavePermitNotFound   = errors.New("leave permit not found")
+	ErrLeavePermitConflict   = errors.New("leave permit conflict")
+	ErrLeavePermitStatus     = errors.New("invalid leave permit status transition")
+	ErrHealthStatusNotFound  = errors.New("health status not found")
+	ErrHealthStatusActive    = errors.New("health status already active")
+	ErrHealthStatusForbidden = errors.New("operation not allowed for current health status")
+
 	// Class errors
 	ErrClassNotFound          = errors.New("class not found")
 	ErrStudentAlreadyEnrolled = errors.New("student already enrolled in class")

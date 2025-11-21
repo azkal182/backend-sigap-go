@@ -45,6 +45,8 @@ func main() {
 	teacherRepo := infraRepo.NewTeacherRepository()
 	subjectRepo := infraRepo.NewSubjectRepository()
 	classScheduleRepo := infraRepo.NewClassScheduleRepository()
+	leavePermitRepo := infraRepo.NewLeavePermitRepository()
+	healthStatusRepo := infraRepo.NewHealthStatusRepository()
 	sksDefinitionRepo := infraRepo.NewSKSDefinitionRepository()
 	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
 	studentSKSResultRepo := infraRepo.NewStudentSKSResultRepository()
@@ -77,7 +79,9 @@ func main() {
 	classScheduleUseCase := usecase.NewClassScheduleUseCase(classScheduleRepo, classRepo, teacherRepo, subjectRepo, scheduleSlotRepo, dormitoryRepo, auditLogger)
 	sksDefinitionUseCase := usecase.NewSKSDefinitionUseCase(sksDefinitionRepo, fanRepo, subjectRepo, auditLogger)
 	sksExamUseCase := usecase.NewSKSExamScheduleUseCase(sksExamRepo, sksDefinitionRepo, teacherRepo, auditLogger)
-	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, auditLogger)
+	leavePermitUseCase := usecase.NewLeavePermitUseCase(leavePermitRepo, studentRepo, auditLogger)
+	healthStatusUseCase := usecase.NewHealthStatusUseCase(healthStatusRepo, studentRepo, auditLogger)
+	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, leavePermitUseCase, healthStatusUseCase, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -96,6 +100,8 @@ func main() {
 	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
 	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
 	attendanceHandler := handler.NewAttendanceHandler(attendanceUseCase)
+	leavePermitHandler := handler.NewLeavePermitHandler(leavePermitUseCase)
+	healthStatusHandler := handler.NewHealthStatusHandler(healthStatusUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
@@ -121,6 +127,8 @@ func main() {
 		sksExamHandler,
 		attendanceHandler,
 		scheduleSlotHandler,
+		leavePermitHandler,
+		healthStatusHandler,
 		authMiddleware,
 	)
 

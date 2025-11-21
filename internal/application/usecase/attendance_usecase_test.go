@@ -23,12 +23,30 @@ func (auditLoggerStub) Log(ctx context.Context, resource, action, targetID strin
 	return nil
 }
 
+type fakeLeavePermitProvider struct {
+	permit *entity.LeavePermit
+	err    error
+}
+
+func (f fakeLeavePermitProvider) GetActivePermitForDate(ctx context.Context, studentID uuid.UUID, date time.Time) (*entity.LeavePermit, error) {
+	return f.permit, f.err
+}
+
+type fakeHealthStatusProvider struct {
+	status *entity.HealthStatus
+	err    error
+}
+
+func (f fakeHealthStatusProvider) GetActiveHealthStatusForDate(ctx context.Context, studentID uuid.UUID, date time.Time) (*entity.HealthStatus, error) {
+	return f.status, f.err
+}
+
 func TestAttendanceUseCase_OpenSessions(t *testing.T) {
 	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
 	studentRepo := new(mocks.StudentAttendanceRepositoryMock)
 	teacherRepo := new(mocks.TeacherAttendanceRepositoryMock)
 	classScheduleRepo := new(mocks.ClassScheduleRepositoryMock)
-	uc := usecase.NewAttendanceUseCase(sessionRepo, studentRepo, teacherRepo, classScheduleRepo, auditLoggerStub{})
+	uc := usecase.NewAttendanceUseCase(sessionRepo, studentRepo, teacherRepo, classScheduleRepo, nil, nil, auditLoggerStub{})
 
 	scheduleID := uuidFromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 	teacherID := uuidFromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -60,7 +78,7 @@ func TestAttendanceUseCase_SubmitStudentAttendance(t *testing.T) {
 	studentRepo := new(mocks.StudentAttendanceRepositoryMock)
 	teacherRepo := new(mocks.TeacherAttendanceRepositoryMock)
 	classScheduleRepo := new(mocks.ClassScheduleRepositoryMock)
-	uc := usecase.NewAttendanceUseCase(sessionRepo, studentRepo, teacherRepo, classScheduleRepo, auditLoggerStub{})
+	uc := usecase.NewAttendanceUseCase(sessionRepo, studentRepo, teacherRepo, classScheduleRepo, nil, nil, auditLoggerStub{})
 
 	sessionID := uuidFromString("cccccccc-cccc-cccc-cccc-cccccccccccc")
 	studentID := uuidFromString("dddddddd-dddd-dddd-dddd-dddddddddddd")
@@ -80,7 +98,7 @@ func TestAttendanceUseCase_SubmitStudentAttendance(t *testing.T) {
 
 func TestAttendanceUseCase_SubmitStudentAttendance_Locked(t *testing.T) {
 	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
-	uc := usecase.NewAttendanceUseCase(sessionRepo, new(mocks.StudentAttendanceRepositoryMock), new(mocks.TeacherAttendanceRepositoryMock), new(mocks.ClassScheduleRepositoryMock), auditLoggerStub{})
+	uc := usecase.NewAttendanceUseCase(sessionRepo, new(mocks.StudentAttendanceRepositoryMock), new(mocks.TeacherAttendanceRepositoryMock), new(mocks.ClassScheduleRepositoryMock), nil, nil, auditLoggerStub{})
 
 	sessionID := uuidFromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
 	sessionRepo.On("GetByID", mock.Anything, sessionID).
@@ -95,7 +113,7 @@ func TestAttendanceUseCase_SubmitStudentAttendance_Locked(t *testing.T) {
 
 func TestAttendanceUseCase_LockSessions(t *testing.T) {
 	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
-	uc := usecase.NewAttendanceUseCase(sessionRepo, new(mocks.StudentAttendanceRepositoryMock), new(mocks.TeacherAttendanceRepositoryMock), new(mocks.ClassScheduleRepositoryMock), auditLoggerStub{})
+	uc := usecase.NewAttendanceUseCase(sessionRepo, new(mocks.StudentAttendanceRepositoryMock), new(mocks.TeacherAttendanceRepositoryMock), new(mocks.ClassScheduleRepositoryMock), nil, nil, auditLoggerStub{})
 
 	sessionRepo.On("LockSessionsByDate", mock.Anything, mock.AnythingOfType("time.Time")).Return(nil)
 
@@ -111,4 +129,103 @@ func uuidFromString(id string) uuid.UUID {
 		panic(err)
 	}
 	return parsed
+}
+
+func TestAttendanceUseCase_SubmitStudentAttendance_HealthOverride(t *testing.T) {
+	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
+	studentRepo := new(mocks.StudentAttendanceRepositoryMock)
+	uc := usecase.NewAttendanceUseCase(
+		sessionRepo,
+		studentRepo,
+		new(mocks.TeacherAttendanceRepositoryMock),
+		new(mocks.ClassScheduleRepositoryMock),
+		fakeLeavePermitProvider{},
+		fakeHealthStatusProvider{status: &entity.HealthStatus{ID: uuid.New()}},
+		auditLoggerStub{},
+	)
+
+	sessionID := uuidFromString("11111111-1111-1111-1111-111111111111")
+	studentID := uuidFromString("22222222-2222-2222-2222-222222222222")
+	sessionRepo.On("GetByID", mock.Anything, sessionID).
+		Return(&entity.AttendanceSession{ID: sessionID, Status: entity.AttendanceSessionStatusOpen, Date: time.Now()}, nil)
+	studentRepo.
+		On("BulkUpsert", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			records := args.Get(1).([]*entity.StudentAttendance)
+			assert.Equal(t, entity.StudentAttendanceSick, records[0].Status)
+		}).
+		Return(nil)
+
+	err := uc.SubmitStudentAttendance(context.Background(), sessionID, dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{{StudentID: studentID.String(), Status: string(entity.StudentAttendancePresent)}},
+	})
+
+	assert.NoError(t, err)
+	studentRepo.AssertExpectations(t)
+}
+
+func TestAttendanceUseCase_SubmitStudentAttendance_LeaveOverride(t *testing.T) {
+	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
+	studentRepo := new(mocks.StudentAttendanceRepositoryMock)
+	uc := usecase.NewAttendanceUseCase(
+		sessionRepo,
+		studentRepo,
+		new(mocks.TeacherAttendanceRepositoryMock),
+		new(mocks.ClassScheduleRepositoryMock),
+		fakeLeavePermitProvider{permit: &entity.LeavePermit{ID: uuid.New()}},
+		fakeHealthStatusProvider{},
+		auditLoggerStub{},
+	)
+
+	sessionID := uuidFromString("33333333-3333-3333-3333-333333333333")
+	studentID := uuidFromString("44444444-4444-4444-4444-444444444444")
+	sessionRepo.On("GetByID", mock.Anything, sessionID).
+		Return(&entity.AttendanceSession{ID: sessionID, Status: entity.AttendanceSessionStatusOpen, Date: time.Now()}, nil)
+	studentRepo.
+		On("BulkUpsert", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			records := args.Get(1).([]*entity.StudentAttendance)
+			assert.Equal(t, entity.StudentAttendancePermit, records[0].Status)
+		}).
+		Return(nil)
+
+	err := uc.SubmitStudentAttendance(context.Background(), sessionID, dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{{StudentID: studentID.String(), Status: string(entity.StudentAttendancePresent)}},
+	})
+
+	assert.NoError(t, err)
+	studentRepo.AssertExpectations(t)
+}
+
+func TestAttendanceUseCase_SubmitStudentAttendance_HealthPriorityOverLeave(t *testing.T) {
+	sessionRepo := new(mocks.AttendanceSessionRepositoryMock)
+	studentRepo := new(mocks.StudentAttendanceRepositoryMock)
+	uc := usecase.NewAttendanceUseCase(
+		sessionRepo,
+		studentRepo,
+		new(mocks.TeacherAttendanceRepositoryMock),
+		new(mocks.ClassScheduleRepositoryMock),
+		fakeLeavePermitProvider{permit: &entity.LeavePermit{ID: uuid.New()}},
+		fakeHealthStatusProvider{status: &entity.HealthStatus{ID: uuid.New()}},
+		auditLoggerStub{},
+	)
+
+	sessionID := uuidFromString("55555555-5555-5555-5555-555555555555")
+	studentID := uuidFromString("66666666-6666-6666-6666-666666666666")
+	sessionRepo.On("GetByID", mock.Anything, sessionID).
+		Return(&entity.AttendanceSession{ID: sessionID, Status: entity.AttendanceSessionStatusOpen, Date: time.Now()}, nil)
+	studentRepo.
+		On("BulkUpsert", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			records := args.Get(1).([]*entity.StudentAttendance)
+			assert.Equal(t, entity.StudentAttendanceSick, records[0].Status)
+		}).
+		Return(nil)
+
+	err := uc.SubmitStudentAttendance(context.Background(), sessionID, dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{{StudentID: studentID.String(), Status: string(entity.StudentAttendancePresent)}},
+	})
+
+	assert.NoError(t, err)
+	studentRepo.AssertExpectations(t)
 }

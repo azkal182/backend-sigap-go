@@ -277,6 +277,15 @@ Server akan berjalan di `http://localhost:8080`
 ### Permissions (Protected)
 - `GET /api/permissions` - List permissions (with pagination, requires `role:read` permission)
 
+### Leave Permits & Health Statuses (Security / UKS)
+- `GET /api/leave-permits` - List permits (filters: student, status, type, date; requires `leave_permits:read`)
+- `POST /api/leave-permits` - Create pending permit (requires `leave_permits:create`); see README section for approve/reject/complete workflows
+- `GET /api/health-statuses` - List active/revoked sick statuses (requires `health_statuses:read`)
+- `POST /api/health-statuses` - Create sick status (requires `health_statuses:create`), overrides attendance to `sick`
+- `PUT /api/health-statuses/:id/revoke` - Revoke status (requires `health_statuses:revoke`)
+
+> Detail permissions & sample requests tersedia di bagian "Leave Permit Endpoints" dan "Health Status Endpoints" pada README ini.
+
 ### FAN (Protected)
 - `GET /api/fans` - List FAN structures (requires `fans:read` permission)
 - `GET /api/fans/:id` - Get FAN detail (requires `fans:read` permission)
@@ -994,6 +1003,69 @@ curl -X POST http://localhost:8080/api/attendance-sessions/{session_id}/students
 
 ```bash
 go run cmd/attendance_lock/main.go -date 2025-11-20
+```
+
+### Leave Permit Endpoints
+
+| Method & Path | Description | Required Permissions |
+| --- | --- | --- |
+| `GET /api/leave-permits` | List leave permits with optional filters (student, status, type, date). | `leave_permits:read` |
+| `POST /api/leave-permits` | Create a leave permit (pending status). | `leave_permits:create` |
+| `PUT /api/leave-permits/:id/approve` | Approve a pending permit. | `leave_permits:approve` |
+| `PUT /api/leave-permits/:id/reject` | Reject a pending permit. | `leave_permits:approve` |
+| `PUT /api/leave-permits/:id/complete` | Mark an approved permit as completed (student returned). | `leave_permits:complete` |
+
+**Create Leave Permit Example**
+
+```bash
+curl -X POST http://localhost:8080/api/leave-permits \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "student_id": "63b2d272-4e61-4cc2-9fd1-6e327fa8f424",
+    "type": "official_duty",
+    "reason": "National competition",
+    "start_date": "2025-11-25",
+    "end_date": "2025-11-28"
+  }'
+```
+
+**Approve Leave Permit Example**
+
+```bash
+curl -X PUT http://localhost:8080/api/leave-permits/{permit_id}/approve \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### Health Status Endpoints
+
+| Method & Path | Description | Required Permissions |
+| --- | --- | --- |
+| `GET /api/health-statuses` | List health (sick) statuses with filters (student, status, date). | `health_statuses:read` |
+| `POST /api/health-statuses` | Create an active health status (auto-marks student as sick in attendance). | `health_statuses:create` |
+| `PUT /api/health-statuses/:id/revoke` | Revoke an active health status when the student recovers. | `health_statuses:revoke` |
+
+**Create Health Status Example**
+
+```bash
+curl -X POST http://localhost:8080/api/health-statuses \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "student_id": "63b2d272-4e61-4cc2-9fd1-6e327fa8f424",
+    "diagnosis": "Influenza",
+    "notes": "Needs bed rest",
+    "start_date": "2025-11-21"
+  }'
+```
+
+**Revoke Health Status Example**
+
+```bash
+curl -X PUT http://localhost:8080/api/health-statuses/{status_id}/revoke \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json"
 ```
 
 ### Default Permissions
