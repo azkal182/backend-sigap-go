@@ -60,6 +60,7 @@ func main() {
 	regencyRepo := infraRepo.NewRegencyRepository()
 	districtRepo := infraRepo.NewDistrictRepository()
 	villageRepo := infraRepo.NewVillageRepository()
+	reportRepo := infraRepo.NewReportRepository()
 
 	// Initialize services
 	tokenService := infraService.NewJWTService()
@@ -85,6 +86,7 @@ func main() {
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
+	reportUseCase := usecase.NewReportUseCase(reportRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -105,6 +107,7 @@ func main() {
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
+	reportHandler := handler.NewReportHandler(reportUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
@@ -129,6 +132,7 @@ func main() {
 		scheduleSlotHandler,
 		leavePermitHandler,
 		healthStatusHandler,
+		reportHandler,
 		authMiddleware,
 	)
 

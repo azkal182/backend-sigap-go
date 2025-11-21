@@ -347,6 +347,12 @@ Berikut penulisan ulang seluruh **phase** dengan penamaan **tabel, field, dan en
 
   * `GET /api/reports/mutations?student_id=...`
 
+### **Permissions & Status**
+
+* Permissions introduced: `reports:attendance:read`, `reports:security:read`, `reports:health:read`, `reports:academic:read`.
+* `central_secretary`, `admin`, dan `super_admin` memiliki seluruh izin laporan; role lain dapat diberi subset sesuai kebutuhan.
+* Status (Nov 2025): backend wiring (DTOs, repository, use case, handler, router, seed) selesai; dokumentasi & testing sedang berjalan.
+
 ---
 
 # **PHASE 9 – Stability: Testing, Audit, Performance**

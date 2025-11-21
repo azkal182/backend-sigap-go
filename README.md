@@ -286,6 +286,49 @@ Server akan berjalan di `http://localhost:8080`
 
 > Detail permissions & sample requests tersedia di bagian "Leave Permit Endpoints" dan "Health Status Endpoints" pada README ini.
 
+### Reports (Protected)
+- `GET /api/reports/attendance/students?date=YYYY-MM-DD&dormitory_id=...` – Aggregated student attendance (requires `reports:attendance:read`).
+- `GET /api/reports/attendance/teachers?date=YYYY-MM-DD&slot_id=...` – Teacher punctuality summary (requires `reports:attendance:read`).
+- `GET /api/reports/leave-permits?status=active&type=home_leave` – Security leave metrics (requires `reports:security:read`).
+- `GET /api/reports/health-statuses?status=active&dormitory_id=...` – Active/revoked sickness counts (requires `reports:health:read`).
+- `GET /api/reports/sks?fan_id=...&is_passed=true` – SKS pass/fail dashboard (requires `reports:academic:read`).
+- `GET /api/reports/mutations?student_id=...` – Mutation trail across dorm/class history (requires `reports:academic:read`).
+
+Example – Student Attendance Report
+
+```bash
+curl -X GET "http://localhost:8080/api/reports/attendance/students?date=2025-11-21&dormitory_id=<DORM_ID>" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+**Response 200**
+
+```json
+{
+  "success": true,
+  "message": "Student attendance report retrieved successfully",
+  "data": {
+    "generated_at": "2025-11-21T23:59:00Z",
+    "filters": {
+      "date": "2025-11-21",
+      "dormitory_id": "<DORM_ID>"
+    },
+    "rows": [
+      {
+        "dormitory_id": "<DORM_ID>",
+        "class_id": "<CLASS_ID>",
+        "fan_id": "<FAN_ID>",
+        "total": 30,
+        "present": 24,
+        "absent": 2,
+        "permit": 3,
+        "sick": 1
+      }
+    ]
+  }
+}
+```
+
 ### FAN (Protected)
 - `GET /api/fans` - List FAN structures (requires `fans:read` permission)
 - `GET /api/fans/:id` - Get FAN detail (requires `fans:read` permission)

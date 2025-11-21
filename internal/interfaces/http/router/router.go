@@ -28,6 +28,7 @@ func SetupRouter(
 	scheduleSlotHandler *handler.ScheduleSlotHandler,
 	leavePermitHandler *handler.LeavePermitHandler,
 	healthStatusHandler *handler.HealthStatusHandler,
+	reportHandler *handler.ReportHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
@@ -191,6 +192,20 @@ func SetupRouter(
 				scheduleSlots.POST("", authMiddleware.RequirePermission("schedule_slots:create"), scheduleSlotHandler.CreateScheduleSlot)
 				scheduleSlots.PUT(":id", authMiddleware.RequirePermission("schedule_slots:update"), scheduleSlotHandler.UpdateScheduleSlot)
 				scheduleSlots.DELETE(":id", authMiddleware.RequirePermission("schedule_slots:delete"), scheduleSlotHandler.DeleteScheduleSlot)
+			}
+
+			// Reports routes
+			reports := protected.Group("/reports")
+			{
+				attendanceReports := reports.Group("/attendance")
+				{
+					attendanceReports.GET("/students", authMiddleware.RequirePermission("reports:attendance:read"), reportHandler.GetStudentAttendanceReport)
+					attendanceReports.GET("/teachers", authMiddleware.RequirePermission("reports:attendance:read"), reportHandler.GetTeacherAttendanceReport)
+				}
+				reports.GET("/leave-permits", authMiddleware.RequirePermission("reports:security:read"), reportHandler.GetLeavePermitReport)
+				reports.GET("/health-statuses", authMiddleware.RequirePermission("reports:health:read"), reportHandler.GetHealthStatusReport)
+				reports.GET("/sks", authMiddleware.RequirePermission("reports:academic:read"), reportHandler.GetSKSReport)
+				reports.GET("/mutations", authMiddleware.RequirePermission("reports:academic:read"), reportHandler.GetMutationReport)
 			}
 
 			// Class schedule routes

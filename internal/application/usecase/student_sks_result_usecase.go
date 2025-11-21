@@ -309,19 +309,3 @@ func (uc *StudentSKSResultUseCase) toStudentSKSResultResponse(result *entity.Stu
 func (uc *StudentSKSResultUseCase) logAudit(ctx context.Context, action string, id uuid.UUID, metadata map[string]string) {
 	_ = uc.auditLogger.Log(ctx, "sks_result", action, id.String(), metadata)
 }
-
-func uuidPtrToString(id *uuid.UUID) *string {
-	if id == nil {
-		return nil
-	}
-	val := id.String()
-	return &val
-}
-
-func formatTimePtr(t *time.Time) *string {
-	if t == nil {
-		return nil
-	}
-	val := t.Format(time.RFC3339)
-	return &val
-}

@@ -73,7 +73,7 @@ Tracking tasks and progress for Phase 7 implementation.
   - Attendance endpoint verifying auto `permit`/`sick` when overlapping windows exist.
 
 ## TODO Checklist
-- [ ] Confirm detailed workflow (approval roles, notifications) with stakeholders.
+- [x] Confirm detailed workflow (approval roles, notifications) with stakeholders.
 - [x] Design domain entities + errors for leave permits & health statuses.
 - [x] Define repository interfaces + filters; implement GORM adapters with overlap checks.
 - [x] Create DTOs for create/list/update/revoke flows.
@@ -82,7 +82,7 @@ Tracking tasks and progress for Phase 7 implementation.
 - [x] Add HTTP handlers, routes, permission guards, and request/response documentation in README.
 - [x] Write migrations + update `cmd/migrate` docs.
 - [x] Extend seeders for new permissions/roles; update CLI docs if needed.
-- [ ] Add unit tests (use case level) and HTTP integration tests for leave/health + attendance overrides.
+- [x] Add unit tests (use case level) and HTTP integration tests for leave/health + attendance overrides.
 
 ## Next Steps Snapshot
 - Planning document created (this file) capturing scope, data model, endpoints, permissions, and TODO list for Phase 7.

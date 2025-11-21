@@ -972,6 +972,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	classScheduleRepo := infraRepo.NewClassScheduleRepository()
 	leavePermitRepo := infraRepo.NewLeavePermitRepository()
 	healthStatusRepo := infraRepo.NewHealthStatusRepository()
+	reportRepo := infraRepo.NewReportRepository()
 	sksDefinitionRepo := infraRepo.NewSKSDefinitionRepository()
 	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
 	scheduleSlotRepo := infraRepo.NewScheduleSlotRepository()
@@ -1010,6 +1011,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
+	reportUseCase := usecase.NewReportUseCase(reportRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -1030,6 +1032,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
+	reportHandler := handler.NewReportHandler(reportUseCase)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(tokenService, userRepo)
@@ -1054,6 +1057,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 		scheduleSlotHandler,
 		leavePermitHandler,
 		healthStatusHandler,
+		reportHandler,
 		authMiddleware,
 	)
 
