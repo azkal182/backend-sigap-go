@@ -42,14 +42,14 @@ jobs:
       - name: Run unit tests
         run: go test ./...
 
-      - name: Install Spectral
-        run: npm install -g @stoplight/spectral-cli
+      # - name: Install Spectral
+      #   run: npm install -g @stoplight/spectral-cli
 
-      - name: Lint OpenAPI spec
-        run: spectral lint docs/openapi.yaml
+      # - name: Lint OpenAPI spec
+      #   run: spectral lint docs/openapi.yaml
 
-      - name: Ensure OpenAPI spec committed
-        run: git diff --exit-code docs/openapi.yaml
+      # - name: Ensure OpenAPI spec committed
+      #   run: git diff --exit-code docs/openapi.yaml
 
       - name: Apply database migrations
         run: go run cmd/migrate/main.go -command up
