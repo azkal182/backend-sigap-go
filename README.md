@@ -954,6 +954,48 @@ curl -X GET http://localhost:8080/api/users \
 
 ## 🎯 Permission System
 
+### Attendance Endpoints
+
+| Method & Path | Description | Required Permissions |
+| --- | --- | --- |
+| `POST /api/attendance-sessions/open` | Generate/open attendance sessions for the given class schedules on a specific date. | `attendance_sessions:create` |
+| `POST /api/attendance-sessions/:id/students` | Bulk submit/update student attendance records for a session. | `attendance_sessions:update` |
+| `POST /api/attendance-sessions/:id/teacher` | Submit teacher attendance (manual override). | `attendance_sessions:update` |
+| `POST /api/attendance-sessions/lock-day` | Lock all sessions for a given date (cron-friendly). | `attendance_sessions:lock` |
+| `GET /api/attendance-sessions` | List attendance sessions with filters (schedule, teacher, status, date). | `attendance_sessions:read` |
+
+**Open Sessions Example**
+
+```bash
+curl -X POST http://localhost:8080/api/attendance-sessions/open \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "class_schedule_ids": ["9f0ad9cf-7db1-44fa-b522-4ddcbde9d6d7"],
+    "date": "2025-11-20"
+  }'
+```
+
+**Submit Student Attendance Example**
+
+```bash
+curl -X POST http://localhost:8080/api/attendance-sessions/{session_id}/students \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "records": [
+      {"student_id": "63b2d272-4e61-4cc2-9fd1-6e327fa8f424", "status": "present"},
+      {"student_id": "8a27a91a-7db7-4c64-b89f-5a8f82a8f457", "status": "permit", "note": "Competition"}
+    ]
+  }'
+```
+
+**Lock Sessions Example (cron CLI)**
+
+```bash
+go run cmd/attendance_lock/main.go -date 2025-11-20
+```
+
 ### Default Permissions
 
 **User Permissions:**
@@ -974,6 +1016,12 @@ curl -X GET http://localhost:8080/api/users \
 - `role:update` - Update roles
 - `role:delete` - Delete roles
 
+**Attendance Permissions:**
+- `attendance_sessions:read` – List attendance sessions and view details
+- `attendance_sessions:create` – Open sessions automatically from schedules
+- `attendance_sessions:update` – Submit/update student & teacher attendance
+- `attendance_sessions:lock` – Lock sessions for a day (cron / admin action)
+
 ### Default Roles
 
 - **user** (default role, not protected)
@@ -990,6 +1038,16 @@ curl -X GET http://localhost:8080/api/users \
   - Has all permissions (user:*, dorm:*, role:*)
   - Protected: Cannot modify permissions or delete
   - Use for super administrative access
+
+- **academic_sks**
+  - Focused on academic operations (SKS + attendance)
+  - Granted `attendance_sessions:read`, `attendance_sessions:create`, `attendance_sessions:update`
+  - Intended for academic officers managing day-to-day attendance submissions
+
+- **attendance_cron**
+  - Service account role for the cron/CLI job that locks sessions nightly
+  - Granted `attendance_sessions:read` and `attendance_sessions:lock`
+  - Assign to automation users or CI jobs invoking `cmd/attendance_lock`
 
 ### Protected Roles
 

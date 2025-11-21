@@ -275,6 +275,13 @@ Berikut penulisan ulang seluruh **phase** dengan penamaan **tabel, field, dan en
 
   * `POST /api/attendance-sessions/:id/teacher`
 
+### **Permissions & Roles**
+
+* New permissions: `attendance_sessions:read`, `attendance_sessions:create`, `attendance_sessions:update`, `attendance_sessions:lock`.
+* `admin` role now includes all attendance permissions; `academic_sks` role spreads read/create/update for daily ops.
+* `attendance_cron` role (service account) has read + lock, meant for `cmd/attendance_lock` nightly automation.
+* CLI helper: `go run cmd/attendance_lock/main.go -date YYYY-MM-DD` (defaults to today) to enforce lock job.
+
 ---
 
 # **PHASE 7 – Security (Permit) & Health (Sick Status)**

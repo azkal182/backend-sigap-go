@@ -49,6 +49,9 @@ func main() {
 	sksExamRepo := infraRepo.NewSKSExamScheduleRepository()
 	studentSKSResultRepo := infraRepo.NewStudentSKSResultRepository()
 	fanCompletionRepo := infraRepo.NewFanCompletionStatusRepository()
+	attendanceSessionRepo := infraRepo.NewAttendanceSessionRepository()
+	studentAttendanceRepo := infraRepo.NewStudentAttendanceRepository()
+	teacherAttendanceRepo := infraRepo.NewTeacherAttendanceRepository()
 	scheduleSlotRepo := infraRepo.NewScheduleSlotRepository()
 	auditLogRepo := infraRepo.NewAuditLogRepository()
 	provinceRepo := infraRepo.NewProvinceRepository()
@@ -74,6 +77,7 @@ func main() {
 	classScheduleUseCase := usecase.NewClassScheduleUseCase(classScheduleRepo, classRepo, teacherRepo, subjectRepo, scheduleSlotRepo, dormitoryRepo, auditLogger)
 	sksDefinitionUseCase := usecase.NewSKSDefinitionUseCase(sksDefinitionRepo, fanRepo, subjectRepo, auditLogger)
 	sksExamUseCase := usecase.NewSKSExamScheduleUseCase(sksExamRepo, sksDefinitionRepo, teacherRepo, auditLogger)
+	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	auditLogUseCase := usecase.NewAuditLogUseCase(auditLogRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -91,6 +95,7 @@ func main() {
 	classScheduleHandler := handler.NewClassScheduleHandler(classScheduleUseCase)
 	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
 	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
+	attendanceHandler := handler.NewAttendanceHandler(attendanceUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUseCase)
@@ -114,6 +119,7 @@ func main() {
 		classScheduleHandler,
 		sksDefinitionHandler,
 		sksExamHandler,
+		attendanceHandler,
 		scheduleSlotHandler,
 		authMiddleware,
 	)

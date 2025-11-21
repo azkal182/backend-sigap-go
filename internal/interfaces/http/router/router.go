@@ -23,6 +23,7 @@ func SetupRouter(
 	classScheduleHandler *handler.ClassScheduleHandler,
 	sksDefinitionHandler *handler.SKSDefinitionHandler,
 	sksExamHandler *handler.SKSExamScheduleHandler,
+	attendanceHandler *handler.AttendanceHandler,
 	scheduleSlotHandler *handler.ScheduleSlotHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
@@ -199,6 +200,16 @@ func SetupRouter(
 				sksExams.POST("", authMiddleware.RequirePermission("sks_exams:create"), sksExamHandler.CreateSKSExamSchedule)
 				sksExams.PUT(":id", authMiddleware.RequirePermission("sks_exams:update"), sksExamHandler.UpdateSKSExamSchedule)
 				sksExams.DELETE(":id", authMiddleware.RequirePermission("sks_exams:delete"), sksExamHandler.DeleteSKSExamSchedule)
+			}
+
+			// Attendance session routes
+			attendanceSessions := protected.Group("/attendance-sessions")
+			{
+				attendanceSessions.GET("", authMiddleware.RequirePermission("attendance_sessions:read"), attendanceHandler.ListAttendanceSessions)
+				attendanceSessions.POST("/open", authMiddleware.RequirePermission("attendance_sessions:create"), attendanceHandler.OpenSessions)
+				attendanceSessions.POST(":"+"id/students", authMiddleware.RequirePermission("attendance_sessions:update"), attendanceHandler.SubmitStudentAttendance)
+				attendanceSessions.POST(":"+"id/teacher", authMiddleware.RequirePermission("attendance_sessions:update"), attendanceHandler.SubmitTeacherAttendance)
+				attendanceSessions.POST("/lock-day", authMiddleware.RequirePermission("attendance_sessions:lock"), attendanceHandler.LockSessions)
 			}
 		}
 	}

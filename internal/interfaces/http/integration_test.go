@@ -36,6 +36,131 @@ type testUserRepository struct {
 	db *gorm.DB
 }
 
+func TestAttendanceOpenSessionsEndpoint(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Attendance Dorm")
+	fan := seedFan(t, db)
+	classEntity := seedClass(t, db, fan.ID)
+	teacher := seedTeacher(t, db)
+	schedule := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+
+	user, token := createTestUser(t, db, "attendance-open", tokenService, "attendance_sessions:create", "attendance_sessions:read")
+	assignPermissionsToUser(t, db, user.ID, []string{"attendance_sessions:create", "attendance_sessions:read"})
+
+	payload := map[string]interface{}{
+		"class_schedule_ids": []string{schedule.ID.String()},
+		"date":               "2025-11-20",
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance-sessions/open", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+
+	var session entity.AttendanceSession
+	require.NoError(t, db.Where("class_schedule_id = ?", schedule.ID).First(&session).Error)
+	assert.Equal(t, entity.AttendanceSessionStatusOpen, session.Status)
+}
+
+func TestAttendanceSubmitStudentEndpoint(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	dorm := seedDormitory(t, db, "Attendance Submit Dorm")
+	fan := seedFan(t, db)
+	classEntity := seedClass(t, db, fan.ID)
+	teacher := seedTeacher(t, db)
+	schedule := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+	student := seedStudent(t, db, "Attendance Student")
+
+	session := entity.AttendanceSession{
+		ID:              uuid.New(),
+		ClassScheduleID: schedule.ID,
+		TeacherID:       teacher.ID,
+		Date:            time.Date(2025, 11, 21, 0, 0, 0, 0, time.UTC),
+		Status:          entity.AttendanceSessionStatusOpen,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+	require.NoError(t, db.Create(&session).Error)
+
+	user, token := createTestUser(t, db, "attendance-submit", tokenService, "attendance_sessions:update")
+	assignPermissionsToUser(t, db, user.ID, []string{"attendance_sessions:update"})
+
+	payload := dto.SubmitStudentAttendanceRequest{
+		Records: []dto.StudentAttendanceRecord{
+			{StudentID: student.ID.String(), Status: "present"},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance-sessions/"+session.ID.String()+"/students", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+
+	var record entity.StudentAttendance
+	require.NoError(t, db.Where("attendance_session_id = ? AND student_id = ?", session.ID, student.ID).First(&record).Error)
+	assert.Equal(t, entity.StudentAttendancePresent, record.Status)
+}
+
+func TestAttendanceLockEndpoint(t *testing.T) {
+	router, db, tokenService, cleanup := setupTestRouter(t)
+	defer cleanup()
+
+	targetDate := time.Date(2025, 11, 22, 0, 0, 0, 0, time.UTC)
+	dorm := seedDormitory(t, db, "Attendance Lock Dorm")
+	fan := seedFan(t, db)
+	classEntity := seedClass(t, db, fan.ID)
+	teacher := seedTeacher(t, db)
+	schedule1 := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+	schedule2 := seedClassSchedule(t, db, classEntity, teacher, dorm.ID)
+	sessions := []entity.AttendanceSession{
+		{
+			ID:              uuid.New(),
+			Date:            targetDate,
+			ClassScheduleID: schedule1.ID,
+			Status:          entity.AttendanceSessionStatusOpen,
+			TeacherID:       uuid.New(),
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		},
+		{
+			ID:              uuid.New(),
+			Date:            targetDate,
+			ClassScheduleID: schedule2.ID,
+			Status:          entity.AttendanceSessionStatusSubmitted,
+			TeacherID:       uuid.New(),
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		},
+	}
+	require.NoError(t, db.Create(&sessions).Error)
+
+	user, token := createTestUser(t, db, "attendance-lock", tokenService, "attendance_sessions:lock", "attendance_sessions:read")
+	assignPermissionsToUser(t, db, user.ID, []string{"attendance_sessions:lock", "attendance_sessions:read"})
+
+	payload := dto.LockAttendanceRequest{Date: "2025-11-22"}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance-sessions/lock-day", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+
+	for _, s := range sessions {
+		var refreshed entity.AttendanceSession
+		require.NoError(t, db.First(&refreshed, "id = ?", s.ID).Error)
+		assert.Equal(t, entity.AttendanceSessionStatusLocked, refreshed.Status)
+	}
+}
+
 func seedClass(t *testing.T, db *gorm.DB, fanID uuid.UUID) entity.Class {
 	classEntity := entity.Class{
 		ID:        uuid.New(),
@@ -98,6 +223,47 @@ func seedScheduleSlot(t *testing.T, db *gorm.DB, dormID uuid.UUID, slotNumber in
 		t.Fatalf("failed to seed schedule slot: %v", err)
 	}
 	return slot
+}
+
+func seedStudent(t *testing.T, db *gorm.DB, name string) entity.Student {
+	student := entity.Student{
+		ID:            uuid.New(),
+		StudentNumber: fmt.Sprintf("ST-%d", time.Now().UnixNano()),
+		FullName:      name,
+		BirthDate:     time.Now().AddDate(-15, 0, 0),
+		Gender:        "male",
+		ParentName:    "Parent",
+		Status:        entity.StudentStatusActive,
+		IsActive:      true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+	if err := db.Create(&student).Error; err != nil {
+		t.Fatalf("failed to seed student: %v", err)
+	}
+	return student
+}
+
+func seedClassSchedule(t *testing.T, db *gorm.DB, class entity.Class, teacher entity.Teacher, dormID uuid.UUID) entity.ClassSchedule {
+	start := time.Now().UTC().Add(time.Hour)
+	end := start.Add(45 * time.Minute)
+	schedule := entity.ClassSchedule{
+		ID:          uuid.New(),
+		ClassID:     class.ID,
+		TeacherID:   teacher.ID,
+		DormitoryID: dormID,
+		DayOfWeek:   "mon",
+		StartTime:   &start,
+		EndTime:     &end,
+		Location:    "Room",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := db.Create(&schedule).Error; err != nil {
+		t.Fatalf("failed to seed class schedule: %v", err)
+	}
+	return schedule
 }
 
 func TestScheduleSlotEndpoints(t *testing.T) {
@@ -676,6 +842,12 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	// Temporarily replace database.DB for repositories
 	originalDB := database.DB
 	database.DB = testDB
+	if err := database.MigrateUpVersioned(); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	if err := database.DB.AutoMigrate(&entity.AttendanceSession{}, &entity.StudentAttendance{}, &entity.TeacherAttendance{}); err != nil {
+		t.Fatalf("failed to auto-migrate attendance tables: %v", err)
+	}
 
 	// Initialize repositories with test database
 	userRepo := &testUserRepository{db: testDB}
@@ -719,6 +891,10 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	sksDefinitionUseCase := usecase.NewSKSDefinitionUseCase(sksDefinitionRepo, fanRepo, subjectRepo, auditLogger)
 	sksExamUseCase := usecase.NewSKSExamScheduleUseCase(sksExamRepo, sksDefinitionRepo, teacherRepo, auditLogger)
 	studentSKSResultUseCase := usecase.NewStudentSKSResultUseCase(studentSKSResultRepo, fanCompletionRepo, studentRepo, sksDefinitionRepo, teacherRepo, auditLogger)
+	attendanceSessionRepo := infraRepo.NewAttendanceSessionRepository()
+	studentAttendanceRepo := infraRepo.NewStudentAttendanceRepository()
+	teacherAttendanceRepo := infraRepo.NewTeacherAttendanceRepository()
+	attendanceUseCase := usecase.NewAttendanceUseCase(attendanceSessionRepo, studentAttendanceRepo, teacherAttendanceRepo, classScheduleRepo, auditLogger)
 	roleUseCase := usecase.NewRoleUseCase(roleRepo, permissionRepo, auditLogger)
 	locationUseCase := usecase.NewLocationUseCase(provinceRepo, regencyRepo, districtRepo, villageRepo)
 	permissionUseCase := usecase.NewPermissionUseCase(permissionRepo)
@@ -736,6 +912,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	classScheduleHandler := handler.NewClassScheduleHandler(classScheduleUseCase)
 	sksDefinitionHandler := handler.NewSKSDefinitionHandler(sksDefinitionUseCase)
 	sksExamHandler := handler.NewSKSExamScheduleHandler(sksExamUseCase)
+	attendanceHandler := handler.NewAttendanceHandler(attendanceUseCase)
 	roleHandler := handler.NewRoleHandler(roleUseCase)
 	locationHandler := handler.NewLocationHandler(locationUseCase)
 	permissionHandler := handler.NewPermissionHandler(permissionUseCase)
@@ -760,6 +937,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 		classScheduleHandler,
 		sksDefinitionHandler,
 		sksExamHandler,
+		attendanceHandler,
 		scheduleSlotHandler,
 		authMiddleware,
 	)

@@ -13,6 +13,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func findPermissionByName(perms []*entity.Permission, name string) *entity.Permission {
+	for _, perm := range perms {
+		if perm.Name == name {
+			return perm
+		}
+	}
+	return nil
+}
+
+func mustPermission(perms []*entity.Permission, name string) *entity.Permission {
+	perm := findPermissionByName(perms, name)
+	if perm == nil {
+		log.Fatalf("permission %s not found", name)
+	}
+	return perm
+}
+
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -94,6 +111,11 @@ func main() {
 		{ID: uuid.New(), Name: "student_sks_results:read", Slug: "student-sks-results-read", Resource: "student_sks_results", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "student_sks_results:create", Slug: "student-sks-results-create", Resource: "student_sks_results", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		{ID: uuid.New(), Name: "student_sks_results:update", Slug: "student-sks-results-update", Resource: "student_sks_results", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		// Attendance permissions
+		{ID: uuid.New(), Name: "attendance_sessions:read", Slug: "attendance-sessions-read", Resource: "attendance_sessions", Action: "read", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "attendance_sessions:create", Slug: "attendance-sessions-create", Resource: "attendance_sessions", Action: "create", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "attendance_sessions:update", Slug: "attendance-sessions-update", Resource: "attendance_sessions", Action: "update", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), Name: "attendance_sessions:lock", Slug: "attendance-sessions-lock", Resource: "attendance_sessions", Action: "lock", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 
 	log.Println("Creating permissions...")
@@ -191,6 +213,11 @@ func main() {
 		log.Println("Updated teacher role permissions")
 	}
 
+	attendanceReadPerm := mustPermission(permissions, "attendance_sessions:read")
+	attendanceCreatePerm := mustPermission(permissions, "attendance_sessions:create")
+	attendanceUpdatePerm := mustPermission(permissions, "attendance_sessions:update")
+	attendanceLockPerm := mustPermission(permissions, "attendance_sessions:lock")
+
 	// Admin Role (protected)
 	if !adminRoleExists {
 		adminRole := &entity.Role{
@@ -214,6 +241,7 @@ func main() {
 				*permissions[35], *permissions[36], *permissions[37], *permissions[38], // sks definitions:*
 				*permissions[39], *permissions[40], *permissions[41], *permissions[42], // sks exams:*
 				*permissions[43], *permissions[44], *permissions[45], // student sks results:*
+				*attendanceReadPerm, *attendanceCreatePerm, *attendanceUpdatePerm, *attendanceLockPerm, // attendance
 			},
 		}
 		if err := roleRepo.Create(ctx, adminRole); err != nil {
@@ -261,6 +289,58 @@ func main() {
 			}
 			log.Println("Updated super admin role permissions")
 		}
+	}
+
+	// Academic SKS role (attendance management)
+	academicRole, _ := roleRepo.GetBySlug(ctx, "academic_sks")
+	academicPerms := []*entity.Permission{attendanceReadPerm, attendanceCreatePerm, attendanceUpdatePerm}
+	if academicRole == nil {
+		roleEntity := &entity.Role{
+			ID:          uuid.New(),
+			Name:        "Academic SKS",
+			Slug:        "academic_sks",
+			IsActive:    true,
+			IsProtected: false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Permissions: []entity.Permission{*academicPerms[0], *academicPerms[1], *academicPerms[2]},
+		}
+		if err := roleRepo.Create(ctx, roleEntity); err != nil {
+			log.Printf("Failed to create academic SKS role: %v", err)
+		} else {
+			log.Println("Created academic SKS role")
+		}
+	} else {
+		for _, perm := range academicPerms {
+			roleRepo.AssignPermission(ctx, academicRole.ID, perm.ID)
+		}
+		log.Println("Updated academic SKS role permissions")
+	}
+
+	// Attendance cron role (lock sessions)
+	cronRole, _ := roleRepo.GetBySlug(ctx, "attendance_cron")
+	cronPerms := []*entity.Permission{attendanceReadPerm, attendanceLockPerm}
+	if cronRole == nil {
+		roleEntity := &entity.Role{
+			ID:          uuid.New(),
+			Name:        "Attendance Cron",
+			Slug:        "attendance_cron",
+			IsActive:    true,
+			IsProtected: false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Permissions: []entity.Permission{*cronPerms[0], *cronPerms[1]},
+		}
+		if err := roleRepo.Create(ctx, roleEntity); err != nil {
+			log.Printf("Failed to create attendance cron role: %v", err)
+		} else {
+			log.Println("Created attendance cron role")
+		}
+	} else {
+		for _, perm := range cronPerms {
+			roleRepo.AssignPermission(ctx, cronRole.ID, perm.ID)
+		}
+		log.Println("Updated attendance cron role permissions")
 	}
 
 	// Get roles for user assignment

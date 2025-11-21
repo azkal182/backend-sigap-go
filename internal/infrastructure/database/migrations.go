@@ -355,4 +355,25 @@ func init() {
 			return db.Migrator().DropTable(&entity.StudentSKSResult{})
 		},
 	)
+
+	RegisterMigration(
+		"013_create_attendance_tables",
+		"Create attendance_sessions, student_attendances, and teacher_attendances",
+		func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&entity.AttendanceSession{},
+				&entity.StudentAttendance{},
+				&entity.TeacherAttendance{},
+			)
+		},
+		func(db *gorm.DB) error {
+			if err := db.Migrator().DropTable(&entity.TeacherAttendance{}); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropTable(&entity.StudentAttendance{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&entity.AttendanceSession{})
+		},
+	)
 }

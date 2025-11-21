@@ -59,6 +59,11 @@ var (
 	ErrSKSExamScheduleNotFound   = errors.New("sks exam schedule not found")
 	ErrStudentSKSResultNotFound  = errors.New("student sks result not found")
 
+	// Attendance errors
+	ErrAttendanceSessionNotFound = errors.New("attendance session not found")
+	ErrAttendanceAlreadyLocked   = errors.New("attendance session already locked")
+	ErrAttendanceInvalidStatus   = errors.New("invalid attendance status")
+
 	// Class errors
 	ErrClassNotFound          = errors.New("class not found")
 	ErrStudentAlreadyEnrolled = errors.New("student already enrolled in class")
