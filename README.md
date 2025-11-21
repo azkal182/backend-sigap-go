@@ -249,6 +249,8 @@ Server akan berjalan di `http://localhost:8080`
 ### 8. OpenAPI Workflow (Kontributor)
 - Jalankan `make openapi-sync` sebelum push untuk memastikan `docs/openapi.yaml` valid menurut Spectral dan sudah di-commit.
 - CI (`.github/workflows/main.yml`) juga menjalankan lint yang sama, jadi pastikan lulus lokal agar pipeline tidak gagal.
+- Generate SDK TypeScript via `make openapi-gen-ts` (perlu Docker & `docs/openapi.yaml` sudah bersih). Output otomatis ke `clients/typescript`.
+- Spec dapat diakses publik via `GET /openapi.yaml`, sedangkan UI interaktif Swagger tersedia di `GET /docs`.
 
 ## 📡 API Endpoints
 

@@ -1,6 +1,9 @@
 package router
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/your-org/go-backend-starter/internal/interfaces/http/handler"
 	"github.com/your-org/go-backend-starter/internal/interfaces/http/middleware"
@@ -32,6 +35,37 @@ func SetupRouter(
 	authMiddleware *middleware.AuthMiddleware,
 ) *gin.Engine {
 	router := gin.Default()
+
+	specPath := os.Getenv("OPENAPI_SPEC_PATH")
+	if specPath == "" {
+		specPath = "docs/openapi.yaml"
+	}
+	router.StaticFile("/openapi.yaml", specPath)
+	router.GET("/docs", func(c *gin.Context) {
+		html := `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SIGAP API Docs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/openapi.yaml',
+        dom_id: '#swagger-ui',
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: 'BaseLayout'
+      });
+    };
+  </script>
+</body>
+</html>`
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+	})
 
 	// Global CORS middleware so all routes are covered
 	router.Use(middleware.NewCORSMiddlewareFromEnv())

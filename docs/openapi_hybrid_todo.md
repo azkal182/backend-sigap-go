@@ -74,6 +74,10 @@ Dokumen ini memetakan seluruh rute HTTP (berdasarkan `internal/interfaces/http/r
 - [x] Buat guideline review: perubahan `internal/application/dto` atau handler wajib menjalankan `make openapi-sync` dan commit diff spec.
 - [x] Dokumentasikan prosedur di README/CONTRIBUTING agar setiap PR menjaga sinkronisasi.
 
+### After Phase – OpenAPI Generator Adoption
+- [x] Siapkan konfigurasi generator (mis. `docs/openapi-generator/ts-client.json`) dan target `make openapi-gen-ts` untuk SDK TypeScript.
+- [ ] Tentukan pipeline publikasi SDK (npm registry internal) bila dibutuhkan.
+
 ## 3. Tracking & Pembagian Kerja
 - Gunakan checkbox di atas untuk menandai progres. 
 - Bisa pecah per fase menjadi tiket terpisah (Phase 1-8). 

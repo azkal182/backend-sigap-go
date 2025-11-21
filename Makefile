@@ -8,7 +8,18 @@ TEST_PKGS := $(shell find . -name '*_test.go' -exec dirname {} \; | sort -u)
 # ==============================
 # PHONY targets
 # ==============================
-.PHONY: run seed build test cover test-report migrate-up migrate-down migrate-status migrate-to clean openapi-sync
+.PHONY: run seed build test cover test-report migrate-up migrate-down migrate-status migrate-to clean openapi-sync openapi-gen-ts
+
+# ==============================
+# Go build settings
+# ==============================
+GOBUILD=go build
+GOCLEAN=go clean
+GOTEST=go test
+GOFMT=gofmt -w
+APP_NAME=sigap-backend
+OPENAPI_GENERATOR_IMAGE ?= openapitools/openapi-generator-cli:v7.7.0
+OPENAPI_TS_CONFIG ?= docs/openapi-generator/ts-client.json
 
 # ==============================
 # Run aplikasi
@@ -91,6 +102,15 @@ openapi-sync:
 	@which spectral >/dev/null 2>&1 || (echo "spectral CLI not installed" && exit 1)
 	@spectral lint docs/openapi.yaml
 	@git diff --quiet docs/openapi.yaml || (echo "openapi.yaml has uncommitted changes" && exit 1)
+
+# ==============================
+# OpenAPI Generator helpers
+# ==============================
+openapi-gen-ts: $(OPENAPI_TS_CONFIG) docs/openapi.yaml
+	@command -v docker >/dev/null 2>&1 || (echo "docker CLI not installed" && exit 1)
+	@echo "Generating TypeScript client via openapi-generator..."
+	@docker run --rm -v $(PWD):/local -w /local $(OPENAPI_GENERATOR_IMAGE) generate -c /local/$(OPENAPI_TS_CONFIG)
+	@echo "TypeScript client emitted to clients/typescript"
 
 
 # .PHONY: run build test migrate-up migrate-down clean
