@@ -1,0 +1,79 @@
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      APP_ENV: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run unit tests
+        run: go test ./...
+
+      - name: Apply database migrations
+        run: go run cmd/migrate/main.go -command up
+
+      - name: Seed database
+        run: go run cmd/seed/main.go
+
+      - name: Build linux binary
+        run: GOOS=linux GOARCH=amd64 go build -o sigap-backend ./cmd/main.go
+
+      - name: Prepare environment file
+        run: |
+          echo "${{ secrets.PRODUCTION_ENV_FILE }}" > backend.env
+
+      - name: Secure copy artifacts to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "sigap-backend,backend.env"
+          target: "${{ secrets.VPS_DEPLOY_PATH }}"
+
+      - name: Restart SIGAP backend service
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+            mv backend.env .env
+            chmod +x sigap-backend
+            sudo systemctl restart sigap-backend.service
