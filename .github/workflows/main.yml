@@ -71,7 +71,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          source: "sigap-backend,backend.env"
+          source: "sigap-backend,backend.env,docs/openapi.yaml"
           target: "${{ secrets.VPS_DEPLOY_PATH }}"
 
       - name: Restart SIGAP backend service
