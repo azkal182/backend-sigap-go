@@ -54,8 +54,8 @@ jobs:
       - name: Apply database migrations
         run: go run cmd/migrate/main.go -command up
 
-      - name: Seed database
-        run: go run cmd/seed/main.go
+      # - name: Seed database
+      #   run: go run cmd/seed/main.go
 
       - name: Build linux binary
         run: GOOS=linux GOARCH=amd64 go build -o sigap-backend ./cmd/main.go
