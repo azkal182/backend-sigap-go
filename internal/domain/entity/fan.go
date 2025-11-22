@@ -9,6 +9,7 @@ import (
 // Fan represents an academic fan/stream within the pesantren.
 type Fan struct {
 	ID          uuid.UUID  `json:"id"`
+	DormitoryID uuid.UUID  `json:"dormitory_id" gorm:"type:uuid;index"`
 	Name        string     `json:"name" gorm:"size:150;not null"`
 	Level       string     `json:"level" gorm:"size:50;not null"`
 	Description string     `json:"description"`

@@ -730,7 +730,8 @@ func TestTeacherEndpoints(t *testing.T) {
 }
 
 func seedFan(t *testing.T, db *gorm.DB) entity.Fan {
-	fan := entity.Fan{ID: uuid.New(), Name: "FAN Seed", Level: "junior", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	dorm := seedDormitory(t, db, fmt.Sprintf("Fan Dorm %d", time.Now().UnixNano()))
+	fan := entity.Fan{ID: uuid.New(), DormitoryID: dorm.ID, Name: "FAN Seed", Level: "junior", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := db.Create(&fan).Error; err != nil {
 		t.Fatalf("failed to seed fan: %v", err)
 	}
@@ -743,11 +744,13 @@ func TestFanEndpoints(t *testing.T) {
 
 	user, token := createTestUser(t, db, "fan-admin", tokenService, "fans:read", "fans:create", "fans:update", "fans:delete")
 	assignPermissionsToUser(t, db, user.ID, []string{"fans:read", "fans:create", "fans:update", "fans:delete"})
+	dorm := seedDormitory(t, db, "Fan Integration Dorm")
 
 	// Create
 	createPayload := map[string]string{
-		"name":  "Integration FAN",
-		"level": "senior",
+		"name":         "Integration FAN",
+		"level":        "senior",
+		"dormitory_id": dorm.ID.String(),
 	}
 	createBody, _ := json.Marshal(createPayload)
 	createReq := httptest.NewRequest(http.MethodPost, "/api/fans", bytes.NewBuffer(createBody))
@@ -769,6 +772,13 @@ func TestFanEndpoints(t *testing.T) {
 	listRes := httptest.NewRecorder()
 	router.ServeHTTP(listRes, listReq)
 	assert.Equal(t, http.StatusOK, listRes.Code)
+
+	// List filtered by dormitory
+	filteredReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/fans?dormitory_id=%s", dorm.ID), nil)
+	filteredReq.Header.Set("Authorization", "Bearer "+token)
+	filteredRes := httptest.NewRecorder()
+	router.ServeHTTP(filteredRes, filteredReq)
+	assert.Equal(t, http.StatusOK, filteredRes.Code)
 
 	// Get
 	getReq := httptest.NewRequest(http.MethodGet, "/api/fans/"+fanID, nil)
@@ -993,7 +1003,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB, service.TokenService,
 	userUseCase := usecase.NewUserUseCase(userRepo, roleRepo, auditLogger)
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
 	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
-	fanUseCase := usecase.NewFanUseCase(fanRepo, auditLogger)
+	fanUseCase := usecase.NewFanUseCase(fanRepo, dormitoryRepo, auditLogger)
 	classUseCase := usecase.NewClassUseCase(classRepo, fanRepo, studentRepo, enrollmentRepo, classStaffRepo, auditLogger)
 	teacherUseCase := usecase.NewTeacherUseCase(teacherRepo, userRepo, roleRepo, auditLogger)
 	scheduleSlotUseCase := usecase.NewScheduleSlotUseCase(scheduleSlotRepo, dormitoryRepo, auditLogger)

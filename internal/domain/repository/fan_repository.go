@@ -12,6 +12,7 @@ type FanRepository interface {
 	Create(ctx context.Context, fan *entity.Fan) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Fan, error)
 	List(ctx context.Context, limit, offset int) ([]*entity.Fan, int64, error)
+	ListByDormitory(ctx context.Context, dormitoryID uuid.UUID, limit, offset int) ([]*entity.Fan, int64, error)
 	Update(ctx context.Context, fan *entity.Fan) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

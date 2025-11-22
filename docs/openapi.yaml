@@ -1066,17 +1066,23 @@ components:
     CreateFanRequest:
       type: object
       properties:
+        dormitory_id:
+          type: string
+          format: uuid
         name:
           type: string
         level:
           type: string
         description:
           type: string
-      required: [name, level]
+      required: [dormitory_id, name, level]
 
     UpdateFanRequest:
       type: object
       properties:
+        dormitory_id:
+          type: string
+          format: uuid
         name:
           type: string
         level:
@@ -1088,6 +1094,9 @@ components:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        dormitory_id:
           type: string
           format: uuid
         name:
@@ -2820,6 +2829,20 @@ paths:
         - bearerAuth: []
       tags: [fans]
       summary: List FAN entities
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+        - in: query
+          name: dormitory_id
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Paginated FAN list

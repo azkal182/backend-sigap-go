@@ -269,19 +269,26 @@ Content-Type: application/json
 
 | Method | URL | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/fans` | `fans:read` | List FAN structures. |
-| GET | `/api/fans/:id` | `fans:read` | Detail (levels, classes). |
-| POST | `/api/fans` | `fans:create` | Create FAN hierarchy root. |
-| PUT | `/api/fans/:id` | `fans:update` | Update metadata. |
+| GET | `/api/fans` | `fans:read` | List FAN structures (supports `page`, `page_size`, `dormitory_id`). |
+| GET | `/api/fans/:id` | `fans:read` | Detail (levels, classes, dormitory binding). |
+| POST | `/api/fans` | `fans:create` | Create FAN hierarchy root (requires existing `dormitory_id`). |
+| PUT | `/api/fans/:id` | `fans:update` | Update metadata / move FAN to another dormitory. |
 | DELETE | `/api/fans/:id` | `fans:delete` | Remove FAN (if unused). |
 
 **Create FAN – Request**
 ```json
 {
+  "dormitory_id": "dorm-uuid",
   "name": "FAN 2026",
-  "description": "Batch 2026",
-  "is_active": true
+  "level": "senior",
+  "description": "Batch 2026"
 }
+```
+
+**List FAN by Dormitory – Request**
+```
+GET /api/fans?dormitory_id=<uuid>&page=1&page_size=10
+Authorization: Bearer <token>
 ```
 
 **Create Class – Request**

@@ -64,6 +64,24 @@ func (h *FanHandler) GetFan(c *gin.Context) {
 func (h *FanHandler) ListFans(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	if dormIDStr := c.Query("dormitory_id"); dormIDStr != "" {
+		dormitoryID, err := uuid.Parse(dormIDStr)
+		if err != nil {
+			response.ErrorBadRequest(c, "Invalid dormitory ID", err.Error())
+			return
+		}
+		result, err := h.fanUseCase.ListFansByDormitory(c.Request.Context(), dormitoryID, page, pageSize)
+		if err != nil {
+			response.ErrorInternalServer(c, "Failed to list fans", err.Error())
+			return
+		}
+		response.SuccessOK(c, result, "Fans retrieved successfully")
+		return
+	}
 
 	result, err := h.fanUseCase.ListFans(c.Request.Context(), page, pageSize)
 	if err != nil {

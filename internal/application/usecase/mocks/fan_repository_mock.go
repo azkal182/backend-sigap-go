@@ -33,6 +33,13 @@ func (m *FanRepositoryMock) List(ctx context.Context, limit, offset int) ([]*ent
 	return fans, total, args.Error(2)
 }
 
+func (m *FanRepositoryMock) ListByDormitory(ctx context.Context, dormitoryID uuid.UUID, limit, offset int) ([]*entity.Fan, int64, error) {
+	args := m.Called(ctx, dormitoryID, limit, offset)
+	fans, _ := args.Get(0).([]*entity.Fan)
+	total := args.Get(1).(int64)
+	return fans, total, args.Error(2)
+}
+
 func (m *FanRepositoryMock) Update(ctx context.Context, fan *entity.Fan) error {
 	args := m.Called(ctx, fan)
 	return args.Error(0)

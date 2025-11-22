@@ -73,7 +73,7 @@ func main() {
 	dormitoryUseCase := usecase.NewDormitoryUseCase(dormitoryRepo, userRepo, auditLogger)
 	studentUseCase := usecase.NewStudentUseCase(studentRepo, dormitoryRepo, auditLogger)
 	studentSKSResultUseCase := usecase.NewStudentSKSResultUseCase(studentSKSResultRepo, fanCompletionRepo, studentRepo, sksDefinitionRepo, teacherRepo, auditLogger)
-	fanUseCase := usecase.NewFanUseCase(fanRepo, auditLogger)
+	fanUseCase := usecase.NewFanUseCase(fanRepo, dormitoryRepo, auditLogger)
 	classUseCase := usecase.NewClassUseCase(classRepo, fanRepo, studentRepo, enrollmentRepo, classStaffRepo, auditLogger)
 	teacherUseCase := usecase.NewTeacherUseCase(teacherRepo, userRepo, roleRepo, auditLogger)
 	scheduleSlotUseCase := usecase.NewScheduleSlotUseCase(scheduleSlotRepo, dormitoryRepo, auditLogger)

@@ -32,6 +32,7 @@ Aplikasi backend starter berbasis **Golang** dengan **Clean Architecture / Hexag
 - ✅ CRUD untuk data dormitory (dengan atribut `name`, `gender`, `level`, `code`, status aktif)
 - ✅ Assign/Remove staff ke dormitory via endpoint khusus
 - ✅ Setiap dormitory dapat dibatasi akses berdasarkan guard
+- ✅ FAN hierarchy kini selalu berawal dari dormitory → fan → class → schedule; validasi memastikan setiap FAN terikat ke dormitory yang ada
 
 ### 5. Student Management (CRUD Students + SKS Results)
 - ✅ CRUD santri dengan atribut `student_number`, `full_name`, `birth_date`, `gender`, `parent_name`, status aktif
@@ -336,11 +337,27 @@ curl -X GET "http://localhost:8080/api/reports/attendance/students?date=2025-11-
 ```
 
 ### FAN (Protected)
-- `GET /api/fans` - List FAN structures (requires `fans:read` permission)
+- `GET /api/fans` - List FAN structures (supports `page`, `page_size`, dan `dormitory_id` filter; requires `fans:read` permission)
 - `GET /api/fans/:id` - Get FAN detail (requires `fans:read` permission)
-- `POST /api/fans` - Create FAN (requires `fans:create` permission)
-- `PUT /api/fans/:id` - Update FAN (requires `fans:update` permission)
+- `POST /api/fans` - Create FAN terikat `dormitory_id` (requires `fans:create` permission)
+- `PUT /api/fans/:id` - Update FAN (dapat memindahkan dormitory dengan validasi akses, requires `fans:update` permission)
 - `DELETE /api/fans/:id` - Delete FAN (requires `fans:delete` permission)
+
+**Create FAN – Request**
+```json
+{
+  "dormitory_id": "dorm-uuid",
+  "name": "FAN 2026",
+  "level": "senior",
+  "description": "Batch 2026"
+}
+```
+
+**List FAN by Dormitory – Request**
+```
+GET /api/fans?dormitory_id=<dorm-uuid>&page=1&page_size=10
+Authorization: Bearer <token>
+```
 
 ### Classes (Protected)
 - `GET /api/classes?fan_id=...` - List classes filtered by FAN (requires `classes:read` permission)

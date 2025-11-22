@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -424,6 +425,67 @@ func init() {
 				if err := db.Exec(stmt).Error; err != nil {
 					return err
 				}
+			}
+			return nil
+		},
+	)
+
+	RegisterMigration(
+		"016_add_dormitory_to_fans",
+		"Ensure fans reference dormitories",
+		func(db *gorm.DB) error {
+			if !db.Migrator().HasColumn(&entity.Fan{}, "DormitoryID") {
+				if err := db.Migrator().AddColumn(&entity.Fan{}, "DormitoryID"); err != nil {
+					return err
+				}
+			}
+
+			var existingDorm entity.Dormitory
+			if err := db.Limit(1).Find(&existingDorm).Error; err != nil {
+				return err
+			}
+			if existingDorm.ID == uuid.Nil {
+				existingDorm = entity.Dormitory{ID: uuid.New(), Name: "Default Dormitory", Gender: "unknown", Level: "general", Code: fmt.Sprintf("DFLT-%d", time.Now().UnixNano()), IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				if err := db.Create(&existingDorm).Error; err != nil {
+					return err
+				}
+			}
+
+			if err := db.Model(&entity.Fan{}).
+				Where("dormitory_id IS NULL OR dormitory_id = ?", uuid.Nil).
+				Update("dormitory_id", existingDorm.ID).Error; err != nil {
+				return err
+			}
+
+			if err := db.Migrator().CreateConstraint(&entity.Fan{}, "fk_fans_dormitory"); err != nil {
+				return err
+			}
+			if err := db.Migrator().CreateConstraint(&entity.Fan{}, "fk_fans_dormitory_dormitory_id"); err != nil {
+				return err
+			}
+
+			if db.Dialector.Name() != "sqlite" {
+				if err := db.Exec("ALTER TABLE fans ALTER COLUMN dormitory_id SET NOT NULL").Error; err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+		func(db *gorm.DB) error {
+			if db.Dialector.Name() != "sqlite" {
+				if err := db.Exec("ALTER TABLE fans ALTER COLUMN dormitory_id DROP NOT NULL").Error; err != nil {
+					return err
+				}
+			}
+			if err := db.Migrator().DropConstraint(&entity.Fan{}, "fk_fans_dormitory_dormitory_id"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropConstraint(&entity.Fan{}, "fk_fans_dormitory"); err != nil {
+				return err
+			}
+			if db.Migrator().HasColumn(&entity.Fan{}, "DormitoryID") {
+				return db.Migrator().DropColumn(&entity.Fan{}, "DormitoryID")
 			}
 			return nil
 		},

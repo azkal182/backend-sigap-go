@@ -2,6 +2,7 @@ package dto
 
 // CreateFanRequest represents payload to create a FAN entity.
 type CreateFanRequest struct {
+	DormitoryID string `json:"dormitory_id" binding:"required,uuid"`
 	Name        string `json:"name" binding:"required,min=3,max=150"`
 	Level       string `json:"level" binding:"required,min=2,max=50"`
 	Description string `json:"description" binding:"omitempty,max=255"`
@@ -9,6 +10,7 @@ type CreateFanRequest struct {
 
 // UpdateFanRequest represents payload to update a FAN entity.
 type UpdateFanRequest struct {
+	DormitoryID *string `json:"dormitory_id" binding:"omitempty,uuid"`
 	Name        *string `json:"name" binding:"omitempty,min=3,max=150"`
 	Level       *string `json:"level" binding:"omitempty,min=2,max=50"`
 	Description *string `json:"description" binding:"omitempty,max=255"`
@@ -17,6 +19,7 @@ type UpdateFanRequest struct {
 // FanResponse represents FAN data returned to clients.
 type FanResponse struct {
 	ID          string `json:"id"`
+	DormitoryID string `json:"dormitory_id"`
 	Name        string `json:"name"`
 	Level       string `json:"level"`
 	Description string `json:"description"`

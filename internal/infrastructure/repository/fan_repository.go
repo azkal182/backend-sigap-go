@@ -51,6 +51,23 @@ func (r *fanRepository) List(ctx context.Context, limit, offset int) ([]*entity.
 	return fans, total, nil
 }
 
+func (r *fanRepository) ListByDormitory(ctx context.Context, dormitoryID uuid.UUID, limit, offset int) ([]*entity.Fan, int64, error) {
+	var (
+		fans  []*entity.Fan
+		total int64
+	)
+
+	db := r.db.WithContext(ctx).Where("dormitory_id = ?", dormitoryID)
+	if err := db.Model(&entity.Fan{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&fans).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return fans, total, nil
+}
+
 func (r *fanRepository) Update(ctx context.Context, fan *entity.Fan) error {
 	return r.db.WithContext(ctx).Save(fan).Error
 }
